@@ -1,3 +1,6 @@
+// gcc -o main main.c sqlite3.c sqlite3.h
+// login: preceptor / senha: 123
+
 #include "sqlite3.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +10,7 @@ int callbackManager(void *, int, char **, char **);
 int callbackPreceptor(void *, int, char **, char **);
 int authenticateManager(int rc, sqlite3 *db, char *err_msg);
 int createResidency(int rc, sqlite3 *db, char *err_msg);
+int authenticatePreceptor(int rc, sqlite3 *db, char *err_msg);
 
 struct Manager{
     int id;
@@ -34,9 +38,11 @@ struct Preceptor{
 struct Manager *managers[50];
 struct Resident *residents[50];
 struct Preceptor *preceptors[50];
+struct Residency *residencies[50];
 int contManager = 0;
 int contResident = 0;
 int contPreceptor = 0;
+int contResidency = 0;
 
 int main(void) {
     int autenticacao, tipo_de_usuario;
@@ -85,10 +91,12 @@ int main(void) {
             status = authenticateManager(rc, db, err_msg);
 
         } else if (tipo_de_usuario == 2) {
+            status = authenticatePreceptor(rc, db, err_msg);
 
         } else if (tipo_de_usuario == 3) {
 
         }
+        // CADASTRA O NOVO USUÁRIO CASO A OPÇÃO FOR 2
     } else if (autenticacao == 2) {
         printf("\nSe você e da gestão aperte: 1, Preceptor: 2 e Residente: 3. \nValor: ");
         scanf("%i", &tipo_de_usuario);
@@ -129,23 +137,26 @@ int main(void) {
         }
     }
 
+    // ENTRA NAS AÇÕES DO MANAGER (GESTÃO) SE A FUNÇÃO AUTHENTICATEMANAGER RETORNAR 1
     while(status == 1) {
         int userAction;
         
-        printf("\n---- Ações ----\n");
+        printf("\n---- Ações da Gestão ----\n");
         printf("\nCriar residência - 1");
         printf("\nCadastrar residentes - 2");
-        printf("\nCadastrar receptores - 3");
-        printf("\nAtribuir residente a um receptor - 4");
+        printf("\nCadastrar preceptores - 3");
+        printf("\nAtribuir residente a um preceptor - 4");
         printf("\nSair - 5");
         printf("\nDigite o que você deseja fazer: ");
 
         scanf("%i", &userAction);
 
+        // CASO 1, CHAMA FUNÇÃO PARA CRIAR RESIDENCIA
         if (userAction == 1) {
             createResidency(rc, db, err_msg);
         }
 
+        // CASO 2, CADASTRA RESIDENTE
         if (userAction == 2) {
             char nome[200];
             char senha[200];
@@ -191,17 +202,25 @@ int main(void) {
             sqlite3_finalize(stmt);   
         }
   
+        // CASO 3, CADASTRA PRECEPTORES
         if (userAction == 3) {
             char nome[200];
             char senha[200];
-
-            printf("\n---- Cadastre o preceptor ----\n");
+            char residencia[50];
+            
+            printf("\n---- Cadastre o Preceptor ----\n");
 
             printf("Nome de usuário: ");
             scanf(" %[^\n]", nome);
             printf("Senha: ");
             scanf(" %[^\n]", senha);
-
+            printf("\nInforme a Residencia ao qual está associado:\n");
+            for(int i=0;i<contResidency;i++){
+                printf("%s", residencies[i]->residencyName);
+            }
+            scanf(" %[^\n]", residencia);
+            
+            
             sqlite3_stmt *stmt;
             char *sql = "INSERT INTO preceptors(name, password) VALUES(?,?)";
 
@@ -223,11 +242,22 @@ int main(void) {
             sqlite3_finalize(stmt);   
         }
 
+        if (userAction == 4) {
+
+        }
+        // CASO 5, DESLOGA
         if (userAction == 5) {
             status = 0;
         }
     }
 
+    while(status == 2) {
+        int userAction;
+
+        printf("\n---- Ações do Preceptor ----\n");
+        printf("\nVer Meus Residentes - 1\n");
+        scanf("%i", &userAction);
+    }
     sqlite3_close(db);
     
     return 0;
@@ -311,6 +341,38 @@ int authenticateManager(int rc, sqlite3 *db, char *err_msg) {
     return autenticado;
 }
 
+int authenticatePreceptor(int rc, sqlite3 *db,char *err_msg){
+    char nome[200];
+    char senha[200];
+
+    printf("\nNome do usuário: ");
+    scanf(" %[^\n]", nome);
+    printf("Senha: ");
+    scanf(" %[^\n]", senha);
+
+    char *sql = "SELECT * FROM preceptors;";
+
+    rc = sqlite3_exec(db, sql, callbackPreceptor, 0, &err_msg);
+
+    int autenticado;
+
+    for(int i = 0; i < contPreceptor; i++){
+        if(strcmp(preceptors[i]->name, nome) == 0 && strcmp(preceptors[i]->password, senha) == 0){
+            autenticado = 2;
+        }else{
+            autenticado = 0;
+        }
+    }
+
+    if(autenticado == 2){
+        printf("\nCredenciais válidas.\n");
+    }else{
+        printf("\nCredenciais inválidas.\n");
+    }
+
+    return autenticado;
+}
+
 int createResidency(int rc, sqlite3 *db, char *err_msg) {
     char nome[200];
 
@@ -339,5 +401,11 @@ int createResidency(int rc, sqlite3 *db, char *err_msg) {
     sqlite3_finalize(stmt);   
 
     printf("\nResidência criada com sucesso.\n");
+
+    contResidency++;
+
     return 1;
 }
+
+
+//status = authenticatePreceptor(rx, db, err_msg);
