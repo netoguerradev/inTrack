@@ -1,7 +1,7 @@
 // gcc -o main main.c sqlite3.c sqlite3.h
 // login: preceptor / senha: 123
 
-#include <sqlite3.h>
+#include "sqlite3.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -165,6 +165,9 @@ int main(void) {
             char senha[200];
             int preceptorId;
             int residency_id;
+            
+            int validation1 = 0;
+            int validation2 = 0;
 
             char *sqlPreceptors = "SELECT * FROM preceptors;";
             rc = sqlite3_exec(db, sqlPreceptors, callbackPreceptor, 0, &err_msg);
@@ -187,6 +190,17 @@ int main(void) {
             printf("\nEscolha o ID do Preceptor: ");
             scanf("%i", &preceptorId);
 
+            for (int i=0; i<contPreceptor; i++){
+                if(preceptorId == preceptors[i]->id){
+                    printf("\nVocê escolheu: %s\n", preceptors[i]->name);
+                    validation1 = 1;
+                }   
+            }
+            if(validation1 == 0){
+                printf("\nEsse Preceptor não Existe!\n");
+                exit(1);
+            }
+
             printf("\nLista das Residências: \n\n");
 
             for(int i=0;i<contResidency;i++){
@@ -195,6 +209,17 @@ int main(void) {
 
             printf("\nEscolha o ID da Residência: ");
             scanf("%i", &residency_id);
+
+            for(int i=0;i<contResidency;i++){
+                if(residency_id == residencies[i]->id){
+                    printf("\nVocê escolheu: %s\n", residencies[i]->residencyName);
+                    validation2 = 1;
+                }
+            }
+            if(validation2 == 0){
+                printf("\nEssa residencia não existe!\n");
+                exit(1);
+            }
 
             sqlite3_stmt *stmt;
             char *sql = "INSERT INTO residents(name, password, preceptor_id, residency_id) VALUES(?,?,?,?)";
