@@ -1,16 +1,18 @@
 // gcc -o main main.c sqlite3.c sqlite3.h
 // login: preceptor / senha: 123
 
-#include "sqlite3.h"
+#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 int callbackManager(void *, int, char **, char **);
 int callbackPreceptor(void *, int, char **, char **);
+int callbackResidencies(void *NotUsed, int argc, char **argv, char **azColName);
+
 int authenticateManager(int rc, sqlite3 *db, char *err_msg);
-int createResidency(int rc, sqlite3 *db, char *err_msg);
 int authenticatePreceptor(int rc, sqlite3 *db, char *err_msg);
+int createResidency(int rc, sqlite3 *db, char *err_msg);
 
 struct Manager{
     int id;
@@ -23,9 +25,11 @@ struct Resident{
     char name[200];
     char password[200];
     char preceptor_id[200];
+    char residency_id[200];
 };
 
 struct Residency{
+    int id;
     char residencyName[20];
 };
 
@@ -60,7 +64,7 @@ int main(void) {
     
     char *sql = "CREATE TABLE IF NOT EXISTS managers(id INTEGER PRIMARY KEY, name TEXT, password TEXT);"
                 "CREATE TABLE IF NOT EXISTS preceptors(id INTEGER PRIMARY KEY, name TEXT, password TEXT, residency_id INTEGER);"
-                "CREATE TABLE IF NOT EXISTS residents(id INTEGER PRIMARY KEY, name TEXT, password TEXT, preceptor_id INTEGER);"
+                "CREATE TABLE IF NOT EXISTS residents(id INTEGER PRIMARY KEY, name TEXT, password TEXT, preceptor_id INTEGER, residency_id INTEGER);"
                 "CREATE TABLE IF NOT EXISTS residencies(id INTEGER PRIMARY KEY, residencyName TEXT);"
                 "CREATE TABLE IF NOT EXISTS activities(id INTEGER PRIMARY KEY, activityName TEXT, description TEXT, max_grade INTEGER);";
 
@@ -161,9 +165,13 @@ int main(void) {
             char nome[200];
             char senha[200];
             int preceptorId;
+            int residency_id;
 
             char *sqlPreceptors = "SELECT * FROM preceptors;";
             rc = sqlite3_exec(db, sqlPreceptors, callbackPreceptor, 0, &err_msg);
+
+            char *sqlResidencies = "SELECT * FROM residencies";
+            rc = sqlite3_exec(db, sqlResidencies, callbackResidencies, 0, &err_msg);
 
             printf("\n---- Cadastre o residente ----\n");
 
@@ -177,11 +185,20 @@ int main(void) {
                 printf("ID: %i -- Nome: %s\n", preceptors[i]->id, preceptors[i]->name);
             }
 
-            printf("\nEscolha pelo ID: ");
+            printf("\nEscolha o ID do Preceptor: ");
             scanf("%i", &preceptorId);
 
+            printf("\nLista das Residências: \n\n");
+
+            for(int i=0;i<contResidency;i++){
+                printf("ID: %i -- Nome: %s\n", residencies[i]->id, residencies[i]->residencyName);
+            }
+
+            printf("\nEscolha o ID da Residência: ");
+            scanf("%i", &residency_id);
+
             sqlite3_stmt *stmt;
-            char *sql = "INSERT INTO residents(name, password, preceptor_id) VALUES(?,?,?)";
+            char *sql = "INSERT INTO residents(name, password, preceptor_id, residency_id) VALUES(?,?,?,?)";
 
             rc = sqlite3_prepare(db, sql, -1, &stmt, 0);
 
@@ -193,6 +210,8 @@ int main(void) {
             sqlite3_bind_text(stmt, 1, nome, strlen(nome), NULL);
             sqlite3_bind_text(stmt, 2, senha, strlen(senha), NULL);
             sqlite3_bind_int(stmt, 3, preceptorId);
+            sqlite3_bind_int(stmt, 4, residency_id);
+
             rc = sqlite3_step(stmt);
 
             if (rc != SQLITE_DONE) {
@@ -206,7 +225,6 @@ int main(void) {
         if (userAction == 3) {
             char nome[200];
             char senha[200];
-            char residencia[50];
             
             printf("\n---- Cadastre o Preceptor ----\n");
 
@@ -214,12 +232,6 @@ int main(void) {
             scanf(" %[^\n]", nome);
             printf("Senha: ");
             scanf(" %[^\n]", senha);
-            printf("\nInforme a Residencia ao qual está associado:\n");
-            for(int i=0;i<contResidency;i++){
-                printf("%s", residencies[i]->residencyName);
-            }
-            scanf(" %[^\n]", residencia);
-            
             
             sqlite3_stmt *stmt;
             char *sql = "INSERT INTO preceptors(name, password) VALUES(?,?)";
@@ -292,12 +304,25 @@ int callbackResident(void *NotUsed, int argc, char **argv, char **azColName) {
     return 0;
 }
 
+int callbackResidencies(void *NotUsed, int argc, char **argv, char **azColName){
+    NotUsed = 0;
+
+    residencies[contResidency] = (struct Residency *)malloc(1 * sizeof(struct Residency));
+
+    residencies[contResidency]->id = contResidency;
+    strcpy(residencies[contResidency]->residencyName, argv[1]);
+
+    contResidency++;
+
+    return 0;
+}
+
 int callbackPreceptor(void *NotUsed, int argc, char **argv, char **azColName) {
     NotUsed = 0;
 
     preceptors[contPreceptor] = (struct Preceptor *)malloc(1 * sizeof(struct Preceptor));
 
-    preceptors[contPreceptor]->id = 1;
+    preceptors[contPreceptor]->id = contPreceptor;
     strcpy(preceptors[contPreceptor]->name, argv[1]);
     strcpy(preceptors[contPreceptor]->password, argv[2]);
 
