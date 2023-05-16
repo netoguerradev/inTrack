@@ -149,8 +149,7 @@ int main(void) {
         printf("\nCriar residência - 1");
         printf("\nCadastrar residentes - 2");
         printf("\nCadastrar preceptores - 3");
-        printf("\nAtribuir residente a um preceptor - 4");
-        printf("\nSair - 5");
+        printf("\nSair - 4");
         printf("\nDigite o que você deseja fazer: ");
 
         scanf("%i", &userAction);
@@ -179,7 +178,7 @@ int main(void) {
             scanf(" %[^\n]", nome);
             printf("Senha: ");
             scanf(" %[^\n]", senha);
-            printf("Lista dos preceptores: \n\n");
+            printf("\nLista dos preceptores: \n\n");
 
             for (int i = 0; i < contPreceptor; i++) {
                 printf("ID: %i -- Nome: %s\n", preceptors[i]->id, preceptors[i]->name);
@@ -254,11 +253,8 @@ int main(void) {
             sqlite3_finalize(stmt);   
         }
 
+        // CASO 4, DESLOGA
         if (userAction == 4) {
-
-        }
-        // CASO 5, DESLOGA
-        if (userAction == 5) {
             status = 0;
         }
     }
