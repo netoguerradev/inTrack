@@ -375,6 +375,9 @@ int authenticateManager(int rc, sqlite3 *db, char *err_msg) {
     for (int i = 0; i < contManager; i++) {
         if (strcmp(managers[i]->name, nome) == 0 && strcmp(managers[i]->password, senha) == 0) {
             autenticado = 1;
+            if(autenticado == 1) {
+                break;
+            }
         } else {
             autenticado = 0;
         }
@@ -410,6 +413,9 @@ int authenticatePreceptor(int rc, sqlite3 *db,char *err_msg){
     for(int i = 0; i < contPreceptor; i++){
         if(strcmp(preceptors[i]->name, nome) == 0 && strcmp(preceptors[i]->password, senha) == 0){
             autenticado = 2;
+            if(autenticado == 2) {
+                break;
+            }
         }else{
             autenticado = 0;
         }
