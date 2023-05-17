@@ -33,12 +33,14 @@ struct Resident{
 struct Residency{
     int id;
     char residencyName[20];
+    char residency_course[30];
 };
 
 struct Preceptor{
     int id;
     char name[200];
     char password[200];
+    int residency_id;
 };
 
 struct Activity{
@@ -75,7 +77,7 @@ int main(void) {
     char *sql = "CREATE TABLE IF NOT EXISTS managers(id INTEGER PRIMARY KEY, name TEXT, password TEXT);"
                 "CREATE TABLE IF NOT EXISTS preceptors(id INTEGER PRIMARY KEY, name TEXT, password TEXT, residency_id INTEGER);"
                 "CREATE TABLE IF NOT EXISTS residents(id INTEGER PRIMARY KEY, name TEXT, password TEXT, preceptor_id INTEGER, residency_id INTEGER);"
-                "CREATE TABLE IF NOT EXISTS residencies(id INTEGER PRIMARY KEY, residencyName TEXT);"
+                "CREATE TABLE IF NOT EXISTS residencies(id INTEGER PRIMARY KEY, residencyName TEXT, residency_course TEXT);"
                 "CREATE TABLE IF NOT EXISTS activities(id INTEGER PRIMARY KEY, name TEXT, description TEXT, max_grade INTEGER, residency_id INTEGER REFERENCES residencies(id));";
 
     rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
@@ -160,6 +162,8 @@ int main(void) {
         printf("\nCadastrar residentes - 2");
         printf("\nCadastrar preceptores - 3");
         printf("\nSair - 4");
+        printf("\nCadastrar Atividades - 5");
+        printf("\nVisualizar Atividades preceptores - 6");
         printf("\nDigite o que você deseja fazer: ");
 
         scanf("%i", &userAction);
@@ -175,9 +179,9 @@ int main(void) {
             char senha[200];
             int preceptorId;
             int residency_id;
-            
-            int validation1 = 0;
-            int validation2 = 0;
+            int sum=0;
+            int found=0;
+            int collectPreceptors[100];
 
             char *sqlPreceptors = "SELECT * FROM preceptors;";
             rc = sqlite3_exec(db, sqlPreceptors, callbackPreceptor, 0, &err_msg);
@@ -191,26 +195,8 @@ int main(void) {
             scanf(" %[^\n]", nome);
             printf("Senha: ");
             scanf(" %[^\n]", senha);
-            printf("\nLista dos preceptores: \n\n");
 
-            for (int i = 0; i < contPreceptor; i++) {
-                printf("ID: %i -- Nome: %s\n", preceptors[i]->id, preceptors[i]->name);
-            }
-
-            printf("\nEscolha o ID do Preceptor: ");
-            scanf("%i", &preceptorId);
-
-            for (int i=0; i<contPreceptor; i++){
-                if(preceptorId == preceptors[i]->id){
-                    printf("\nVocê escolheu: %s\n", preceptors[i]->name);
-                    validation1 = 1;
-                }   
-            }
-            if(validation1 == 0){
-                printf("\nEsse Preceptor não Existe!\n");
-                exit(1);
-            }
-
+            
             printf("\nLista das Residências: \n\n");
 
             for(int i=0;i<contResidency;i++){
@@ -220,15 +206,42 @@ int main(void) {
             printf("\nEscolha o ID da Residência: ");
             scanf("%i", &residency_id);
 
-            for(int i=0;i<contResidency;i++){
-                if(residency_id == residencies[i]->id){
-                    printf("\nVocê escolheu: %s\n", residencies[i]->residencyName);
-                    validation2 = 1;
-                }
+            while(residency_id > contResidency || residency_id < 0){
+                printf("Residência não encontrada, por favor, digite novamente.\n");
+                printf("Escolha o ID da Residência: ");
+                scanf("%i",&residency_id);
+                printf("\n");
             }
-            if(validation2 == 0){
-                printf("\nEssa residencia não existe!\n");
-                exit(1);
+
+            printf("\nPreceptores da residência ID: %ls\n",&residency_id);
+
+            for (int i = 0; i < contPreceptor; i++) {
+                if(preceptors[i]->id == residency_id){
+                    printf("ID: %i -- Nome: %s\n", preceptors[i]->id, preceptors[i]->name);
+                    collectPreceptors[sum] = preceptors[i]->id;
+                    sum++;
+                } 
+            }
+
+            printf("\nEscolha o ID do Preceptor: ");
+            scanf("%i", &preceptorId);
+
+            while(!found){
+
+                printf("\nEscolha o ID do Preceptor: ");
+                scanf("%i", &preceptorId);
+
+                for (int i = 0; i < sum; i++) {
+                    if (preceptorId == collectPreceptors[i]) {
+                    found = 1;
+                    break;
+                    }
+                }
+
+                if (!found) {
+                     printf("O Preceptor digitado não é válida,tente novamente. \n");
+                }
+                
             }
 
             sqlite3_stmt *stmt;
@@ -253,12 +266,18 @@ int main(void) {
             }
 
             sqlite3_finalize(stmt);   
+
+            printf("\nResidente cadastrado com sucesso.\n");
         }
   
         // CASO 3, CADASTRA PRECEPTORES
         if (userAction == 3) {
             char nome[200];
             char senha[200];
+            int residency_id;
+
+            char *sqlResidencies = "SELECT * FROM residencies";
+            rc = sqlite3_exec(db, sqlResidencies, callbackResidencies, 0, &err_msg);
             
             printf("\n---- Cadastre o Preceptor ----\n");
 
@@ -266,9 +285,26 @@ int main(void) {
             scanf(" %[^\n]", nome);
             printf("Senha: ");
             scanf(" %[^\n]", senha);
+
+            printf("\nLista das Residências: \n\n");
+
+            for(int i=0;i<contResidency;i++){
+                printf("ID: %i -- Nome: %s\n", residencies[i]->id, residencies[i]->residencyName);
+            }
+
+            printf("\nEscolha o ID da Residência: ");
+            scanf("%i", &residency_id);
+
+            while(residency_id > contResidency || residency_id < 0){
+                printf("Residência não encontrada, por favor, digite novamente.\n");
+                printf("Escolha o ID da Residência: ");
+                scanf("%i",&residency_id);
+                printf("\n");
+            }
+
             
             sqlite3_stmt *stmt;
-            char *sql = "INSERT INTO preceptors(name, password) VALUES(?,?)";
+            char *sql = "INSERT INTO preceptors(name, password, residency_id) VALUES(?,?,?)";
 
             rc = sqlite3_prepare(db, sql, -1, &stmt, 0);
 
@@ -279,23 +315,29 @@ int main(void) {
 
             sqlite3_bind_text(stmt, 1, nome, strlen(nome), NULL);
             sqlite3_bind_text(stmt, 2, senha, strlen(senha), NULL);
+            sqlite3_bind_int(stmt, 3, residency_id);
             rc = sqlite3_step(stmt);
 
             if (rc != SQLITE_DONE) {
                 printf("execution failed: %s", sqlite3_errmsg(db));
             }
 
-            sqlite3_finalize(stmt);   
-        }
+            sqlite3_finalize(stmt);  
 
+            printf("\nPreceptor cadastrado com sucesso.\n"); 
+        }
         // CASO 4, DESLOGA
         if (userAction == 4) {
             status = 0;
         }
-        if(userAction == 6) {
+        //CASO 5, CADASTRA AS ATIVIDADES
+        if(userAction == 5) {
+
             createActivity(rc, db, err_msg);
         }
-        if(userAction == 7) {
+        //CASO 6, LISTA AS ATIVIDADES
+        if(userAction == 6) {
+
             visualizeResidencyActivities(rc, db, err_msg);
         }
     }
@@ -432,14 +474,18 @@ int authenticatePreceptor(int rc, sqlite3 *db,char *err_msg){
 
 int createResidency(int rc, sqlite3 *db, char *err_msg) {
     char nome[200];
+    char curso_residencia[200];
 
     printf("\n---- Cadastre uma residência ----\n");
 
     printf("Nome da residência: ");
     scanf(" %[^\n]", nome);
 
+    printf("Curso da residência: ");
+    scanf(" %[^\n]", curso_residencia);
+
     sqlite3_stmt *stmt;
-    char *sql = "INSERT INTO residencies(residencyName) VALUES(?)";
+    char *sql = "INSERT INTO residencies(residencyName, residency_course) VALUES(?,?)";
 
     rc = sqlite3_prepare(db, sql, -1, &stmt, 0);
 
@@ -449,6 +495,7 @@ int createResidency(int rc, sqlite3 *db, char *err_msg) {
     }    
 
     sqlite3_bind_text(stmt, 1, nome, strlen(nome), NULL);
+    sqlite3_bind_text(stmt, 2, curso_residencia, strlen(curso_residencia), NULL);
     rc = sqlite3_step(stmt);
 
     if (rc != SQLITE_DONE) {
