@@ -1,18 +1,20 @@
 // gcc -o main main.c sqlite3.c sqlite3.h
 // login: preceptor / senha: 123
 
-#include "sqlite3.h"
+#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-int callbackManager(void *, int, char **, char **);
-int callbackPreceptor(void *, int, char **, char **);
+int callbackManager(void *NotUsed, int argc, char **argv, char **azColName);
+int callbackPreceptor(void *NotUsed, int argc, char **argv, char **azColName);
 int callbackResidencies(void *NotUsed, int argc, char **argv, char **azColName);
 
 int authenticateManager(int rc, sqlite3 *db, char *err_msg);
 int authenticatePreceptor(int rc, sqlite3 *db, char *err_msg);
 int createResidency(int rc, sqlite3 *db, char *err_msg);
+int createActivity(int rc, sqlite3 *db, char *err_msg);
+int visualizeResidencyActivities(int rc, sqlite3 *db, char *err_msg);
 
 struct Manager{
     int id;
@@ -38,6 +40,14 @@ struct Preceptor{
     char name[200];
     char password[200];
 };
+
+struct Activity{
+    int id;
+    char name[200];
+    char description[1000];
+    int max_grade;
+};
+
 
 struct Manager *managers[50];
 struct Resident *residents[50];
@@ -66,7 +76,7 @@ int main(void) {
                 "CREATE TABLE IF NOT EXISTS preceptors(id INTEGER PRIMARY KEY, name TEXT, password TEXT, residency_id INTEGER);"
                 "CREATE TABLE IF NOT EXISTS residents(id INTEGER PRIMARY KEY, name TEXT, password TEXT, preceptor_id INTEGER, residency_id INTEGER);"
                 "CREATE TABLE IF NOT EXISTS residencies(id INTEGER PRIMARY KEY, residencyName TEXT);"
-                "CREATE TABLE IF NOT EXISTS activities(id INTEGER PRIMARY KEY, activityName TEXT, description TEXT, max_grade INTEGER);";
+                "CREATE TABLE IF NOT EXISTS activities(id INTEGER PRIMARY KEY, name TEXT, description TEXT, max_grade INTEGER, residency_id INTEGER REFERENCES residencies(id));";
 
     rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
     
@@ -282,18 +292,13 @@ int main(void) {
         if (userAction == 4) {
             status = 0;
         }
+        if(userAction == 6) {
+            createActivity(rc, db, err_msg);
+        }
+        if(userAction == 7) {
+            visualizeResidencyActivities(rc, db, err_msg);
+        }
     }
-
-    while(status == 2) {
-        int userAction;
-
-        printf("\n---- Ações do Preceptor ----\n");
-        printf("\nVer Meus Residentes - 1\n");
-        scanf("%i", &userAction);
-    }
-    sqlite3_close(db);
-    
-    return 0;
 }
 
 int callbackManager(void *NotUsed, int argc, char **argv, char **azColName) {
@@ -449,6 +454,127 @@ int createResidency(int rc, sqlite3 *db, char *err_msg) {
     printf("\nResidência criada com sucesso.\n");
 
     contResidency++;
+
+    return 1;
+}
+
+
+int createActivity(int rc, sqlite3 *db, char *err_msg) {
+    char name[200];
+    char description[1000];
+    int max_grade = 0;
+    int residency_id;
+
+    printf("\n---- Cadastre uma Atividade ----\n");
+
+    printf("Nome da Atividade: ");
+    scanf(" %[^\n]", name);
+
+    printf("Descrição da Atividade: ");
+    scanf(" %[^\n]", description);
+
+    printf("Nota Máxima da Atividade: ");
+    scanf("%d", &max_grade);
+
+    char *sqlResidencies = "SELECT * FROM residencies";
+    sqlite3_stmt *residency_stmt;
+
+    rc = sqlite3_prepare_v2(db, sqlResidencies, -1, &residency_stmt, 0);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+
+    printf("\nLista das Residências: \n\n");
+
+    while ((rc = sqlite3_step(residency_stmt)) == SQLITE_ROW) {
+        int id = sqlite3_column_int(residency_stmt, 0);
+        const unsigned char *name = sqlite3_column_text(residency_stmt, 1);
+        printf("ID: %i -- Nome: %s\n", id, name);
+    }
+
+    sqlite3_finalize(residency_stmt);
+    printf("\nEscolha o ID da Residência: ");
+    scanf("%d", &residency_id);
+
+    sqlite3_stmt *stmt;
+    char *sql = "INSERT INTO activities(name, description, max_grade, residency_id) VALUES(?, ?, ?, ?)";
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+
+    sqlite3_bind_text(stmt, 1, name, strlen(name), NULL);
+    sqlite3_bind_text(stmt, 2, description, strlen(description), NULL);
+    sqlite3_bind_int(stmt, 3, max_grade);
+    sqlite3_bind_int(stmt, 4, residency_id);
+
+    rc = sqlite3_step(stmt);
+
+    if (rc != SQLITE_DONE) {
+        printf("execution failed: %s", sqlite3_errmsg(db));
+    }
+
+    sqlite3_finalize(stmt);
+
+    printf("\nAtividade criada com sucesso.\n");
+
+    return 1;
+}
+
+int visualizeResidencyActivities(int rc, sqlite3 *db, char *err_msg) {
+    int residency_id;
+
+    char *sqlResidencies = "SELECT * FROM residencies";
+    sqlite3_stmt *residency_stmt;
+
+    rc = sqlite3_prepare_v2(db, sqlResidencies, -1, &residency_stmt, 0);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+
+    printf("\nLista das Residências: \n\n");
+
+    while ((rc = sqlite3_step(residency_stmt)) == SQLITE_ROW) {
+        int id = sqlite3_column_int(residency_stmt, 0);
+        const unsigned char *name = sqlite3_column_text(residency_stmt, 1);
+        printf("ID: %i -- Nome: %s\n", id, name);
+    }
+
+    sqlite3_finalize(residency_stmt);
+
+    printf("\nEscolha o ID da Residência: ");
+    scanf("%d", &residency_id);
+
+    char *sqlActivities = "SELECT * FROM activities WHERE residency_id = ?";
+    sqlite3_stmt *activity_stmt;
+
+    rc = sqlite3_prepare_v2(db, sqlActivities, -1, &activity_stmt, 0);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+
+    sqlite3_bind_int(activity_stmt, 1, residency_id);
+
+    printf("\nAtividades da Residência Escolhida: \n\n");
+
+    while ((rc = sqlite3_step(activity_stmt)) == SQLITE_ROW) {
+        int id = sqlite3_column_int(activity_stmt, 0);
+        const unsigned char *name = sqlite3_column_text(activity_stmt, 1);
+        const unsigned char *description = sqlite3_column_text(activity_stmt, 2);
+        int max_grade = sqlite3_column_int(activity_stmt, 3);
+        printf("ID: %i -- Nome: %s -- Descrição: %s -- Nota Máxima: %d\n", id, name, description, max_grade);
+    }
+
+    sqlite3_finalize(activity_stmt);
 
     return 1;
 }
