@@ -13,9 +13,12 @@ int callbackResidencies(void *NotUsed, int argc, char **argv, char **azColName);
 int authenticateManager(int rc, sqlite3 *db, char *err_msg);
 int authenticatePreceptor(int rc, sqlite3 *db, char *err_msg);
 int authenticateResident(int rc, sqlite3 *db, char *err_msg);
+
 int createResidency(int rc, sqlite3 *db, char *err_msg);
 int createActivity(int rc, sqlite3 *db, char *err_msg);
+
 int visualizeResidencyActivities(int rc, sqlite3 *db, char *err_msg);
+int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, int residencyID);
 
 struct Manager{
     int id;
@@ -28,7 +31,7 @@ struct Resident{
     char name[200];
     char password[200];
     char preceptor_id[200];
-    char residency_id[200];
+    int residency_id;
 };
 
 struct Residency{
@@ -60,6 +63,7 @@ int contManager = 0;
 int contResident = 0;
 int contPreceptor = 0;
 int contResidency = 0;
+int currentUserID = 0;
 
 int main(void) {
     int autenticacao, tipo_de_usuario;
@@ -270,7 +274,6 @@ int main(void) {
 
             printf("\nResidente cadastrado com sucesso.\n");
         }
-  
         // CASO 3, CADASTRA PRECEPTORES
         if (userAction == 3) {
             char nome[200];
@@ -346,20 +349,27 @@ int main(void) {
     // ENTRA NAS AÇÕES DO RESIDENTE
     while(status == 3) {
         int userAction;
+        int residencyID;
                 
         printf("\n---- Ações do Residente ----\n");
         printf("\nRegistrar Atividade Realizada - 1");
-        printf("\nRegistrar Frequência - 2")
+        printf("\nRegistrar Frequência - 2");
         printf("\nSair - 4");
         printf("\nDigite o que você deseja fazer: ");
 
         scanf("%i", &userAction);
 
         if (userAction == 1){
-            visualizeResidencyActivities(rc, db, err_msg);
+            for(int i=0; i<contResident; i++){
+                if(residents[i]->id == currentUserID){
+                    printf("Olá %s, informe as atividades realizadas hoje:", residents[i]->name);
+                    residencyID = (int)residents[i]->residency_id;
+                    visualizeAndMarkActivities(rc, db, err_msg, residencyID);
+                }
+            }
         }
         if (userAction == 2){
-            
+
         }
         if (userAction == 4) {
             status = 0;
@@ -448,9 +458,6 @@ int authenticateManager(int rc, sqlite3 *db, char *err_msg) {
         } else {
             autenticado = 0;
         }
-        // printf("ID: %i\n", array[i]->id);
-        // printf("Nome: %s\n", array[i]->name);
-        // printf("Senha: %s", array[i]->password);
     }
 
     if (autenticado == 1) {
@@ -535,7 +542,6 @@ int createResidency(int rc, sqlite3 *db, char *err_msg) {
 
     return 1;
 }
-
 
 int createActivity(int rc, sqlite3 *db, char *err_msg) {
     char name[200];
@@ -676,6 +682,7 @@ int authenticateResident(int rc, sqlite3 *db, char *err_msg){
         if(strcmp(residents[i]->name, nome) == 0 && strcmp(residents[i]->password, senha) == 0){
             autenticado = 3;
             if(autenticado == 3){
+                currentUserID = residents[i]->id;
                 break;
             }
         }else{
@@ -690,4 +697,33 @@ int authenticateResident(int rc, sqlite3 *db, char *err_msg){
     return autenticado;
 }
 
+int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, int residencyID){
+    char *sqlActivities = "SELECT * FROM activities WHERE residency_id = ?";
+    sqlite3_stmt *activity_stmt;
+
+    rc = sqlite3_prepare_v2(db, sqlActivities, -1, &activity_stmt, 0);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+
+    sqlite3_bind_int(activity_stmt, 1, residencyID);
+    printf("\nAtividades da Residência: \n\n");
+
+    while ((rc = sqlite3_step(activity_stmt)) == SQLITE_ROW) {
+        int id = sqlite3_column_int(activity_stmt, 0);
+        const unsigned char *name = sqlite3_column_text(activity_stmt, 1);
+        const unsigned char *description = sqlite3_column_text(activity_stmt, 2);
+        int max_grade = sqlite3_column_int(activity_stmt, 3);
+        printf("ID: %i -- Nome: %s -- Descrição: %s -- Nota Máxima: %d\n", id, name, description, max_grade);
+    }
+
+    sqlite3_finalize(activity_stmt);
+
+    return 1;
+
+
+
+}
 //status = authenticatePreceptor(rx, db, err_msg);
