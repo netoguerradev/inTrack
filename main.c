@@ -1,7 +1,7 @@
 // gcc -o main main.c sqlite3.c sqlite3.h
 // login: preceptor / senha: 123
 
-#include <sqlite3.h>
+#include "sqlite3.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +12,7 @@ int callbackResidencies(void *NotUsed, int argc, char **argv, char **azColName);
 
 int authenticateManager(int rc, sqlite3 *db, char *err_msg);
 int authenticatePreceptor(int rc, sqlite3 *db, char *err_msg);
+int authenticateResident(int rc, sqlite3 *db, char *err_msg);
 int createResidency(int rc, sqlite3 *db, char *err_msg);
 int createActivity(int rc, sqlite3 *db, char *err_msg);
 int visualizeResidencyActivities(int rc, sqlite3 *db, char *err_msg);
@@ -110,7 +111,7 @@ int main(void) {
             status = authenticatePreceptor(rc, db, err_msg);
 
         } else if (tipo_de_usuario == 3) {
-
+            status = authenticateResident(rc, db, err_msg);
         }
         // CADASTRA O NOVO USUÁRIO CASO A OPÇÃO FOR 2
     } else if (autenticacao == 2) {
@@ -153,7 +154,7 @@ int main(void) {
         }
     }
 
-    // ENTRA NAS AÇÕES DO MANAGER (GESTÃO) SE A FUNÇÃO AUTHENTICATEMANAGER RETORNAR 1
+    // ENTRA NAS AÇÕES DO MANAGER
     while(status == 1) {
         int userAction;
         
@@ -332,14 +333,38 @@ int main(void) {
         }
         //CASO 5, CADASTRA AS ATIVIDADES
         if(userAction == 5) {
-
             createActivity(rc, db, err_msg);
         }
         //CASO 6, LISTA AS ATIVIDADES
         if(userAction == 6) {
-
             visualizeResidencyActivities(rc, db, err_msg);
         }
+    }
+    // ENTRA NAS AÇÕES DO PRECEPTOR
+    while(status == 2) {
+    }
+    // ENTRA NAS AÇÕES DO RESIDENTE
+    while(status == 3) {
+        int userAction;
+                
+        printf("\n---- Ações do Residente ----\n");
+        printf("\nRegistrar Atividade Realizada - 1");
+        printf("\nRegistrar Frequência - 2")
+        printf("\nSair - 4");
+        printf("\nDigite o que você deseja fazer: ");
+
+        scanf("%i", &userAction);
+
+        if (userAction == 1){
+            visualizeResidencyActivities(rc, db, err_msg);
+        }
+        if (userAction == 2){
+            
+        }
+        if (userAction == 4) {
+            status = 0;
+        }
+
     }
 }
 
@@ -632,5 +657,37 @@ int visualizeResidencyActivities(int rc, sqlite3 *db, char *err_msg) {
     return 1;
 }
 
+int authenticateResident(int rc, sqlite3 *db, char *err_msg){
+    char nome[200];
+    char senha[200];
+
+    printf("\nNome do usuário: ");
+    scanf(" %[^\n]", nome);
+    printf("Senha: ");
+    scanf(" %[^\n]", senha);
+
+    char *sql = "SELECT * FROM residents;";
+
+    rc = sqlite3_exec(db, sql, callbackResident, 0, &err_msg);
+
+    int autenticado;
+
+    for(int i = 0; i< contResident; i++){
+        if(strcmp(residents[i]->name, nome) == 0 && strcmp(residents[i]->password, senha) == 0){
+            autenticado = 3;
+            if(autenticado == 3){
+                break;
+            }
+        }else{
+            autenticado = 0;
+        }
+    }
+    if(autenticado == 3){
+        printf("\nCredenciais Válidas.\n");
+    }else{
+        printf("\nCredenciais inválidas.\n");
+    }
+    return autenticado;
+}
 
 //status = authenticatePreceptor(rx, db, err_msg);
