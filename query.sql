@@ -1,0 +1,1 @@
+DELETE FROM preceptors WHERE id = 1;

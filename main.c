@@ -18,7 +18,7 @@ int createResidency(int rc, sqlite3 *db, char *err_msg);
 int createActivity(int rc, sqlite3 *db, char *err_msg);
 
 int visualizeResidencyActivities(int rc, sqlite3 *db, char *err_msg);
-int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, int residencyID);
+int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]);
 
 struct Manager{
     int id;
@@ -27,15 +27,15 @@ struct Manager{
 };
 
 struct Resident{
-    int id;
+    char id[10];
     char name[200];
     char password[200];
     char preceptor_id[200];
-    int residency_id;
+    char residency_id[200];
 };
 
 struct Residency{
-    int id;
+    char id[10];
     char residencyName[20];
     char residency_course[30];
 };
@@ -54,7 +54,6 @@ struct Activity{
     int max_grade;
 };
 
-
 struct Manager *managers[50];
 struct Resident *residents[50];
 struct Preceptor *preceptors[50];
@@ -63,7 +62,8 @@ int contManager = 0;
 int contResident = 0;
 int contPreceptor = 0;
 int contResidency = 0;
-int currentUserID = 0;
+// int currentUserID = 0;
+char currentUserID[10];
 
 int main(void) {
     int autenticacao, tipo_de_usuario;
@@ -78,12 +78,19 @@ int main(void) {
         
         return 1;
     }
+
+    // activity_id
+    // residency_id
+    // user_id
+    // done
+    // grade
     
     char *sql = "CREATE TABLE IF NOT EXISTS managers(id INTEGER PRIMARY KEY, name TEXT, password TEXT);"
                 "CREATE TABLE IF NOT EXISTS preceptors(id INTEGER PRIMARY KEY, name TEXT, password TEXT, residency_id INTEGER);"
-                "CREATE TABLE IF NOT EXISTS residents(id INTEGER PRIMARY KEY, name TEXT, password TEXT, preceptor_id INTEGER, residency_id INTEGER);"
+                "CREATE TABLE IF NOT EXISTS residents(id INTEGER PRIMARY KEY, name TEXT, password TEXT, preceptor_id INTEGER, residency_id INTEGER, frequency INTEGER DEFAULT 0);"
                 "CREATE TABLE IF NOT EXISTS residencies(id INTEGER PRIMARY KEY, residencyName TEXT, residency_course TEXT);"
-                "CREATE TABLE IF NOT EXISTS activities(id INTEGER PRIMARY KEY, name TEXT, description TEXT, max_grade INTEGER, residency_id INTEGER REFERENCES residencies(id));";
+                "CREATE TABLE IF NOT EXISTS activities(id INTEGER PRIMARY KEY, name TEXT, description TEXT, max_grade INTEGER, residency_id INTEGER REFERENCES residencies(id));"
+                "CREATE TABLE IF NOT EXISTS activities_residents(id INTEGER PRIMARY KEY, activity_id INTEGER, residency_id INTEGER, user_id INTEGER, done INTEGER, grade INTEGER);";
 
     rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
     
@@ -189,6 +196,7 @@ int main(void) {
             int collectPreceptors[100];
 
             char *sqlPreceptors = "SELECT * FROM preceptors;";
+
             rc = sqlite3_exec(db, sqlPreceptors, callbackPreceptor, 0, &err_msg);
 
             char *sqlResidencies = "SELECT * FROM residencies";
@@ -205,7 +213,7 @@ int main(void) {
             printf("\nLista das Residências: \n\n");
 
             for(int i=0;i<contResidency;i++){
-                printf("ID: %i -- Nome: %s\n", residencies[i]->id, residencies[i]->residencyName);
+                printf("ID: %s -- Nome: %s\n", residencies[i]->id, residencies[i]->residencyName);
             }
 
             printf("\nEscolha o ID da Residência: ");
@@ -293,7 +301,7 @@ int main(void) {
             printf("\nLista das Residências: \n\n");
 
             for(int i=0;i<contResidency;i++){
-                printf("ID: %i -- Nome: %s\n", residencies[i]->id, residencies[i]->residencyName);
+                printf("ID: %s -- Nome: %s\n", residencies[i]->id, residencies[i]->residencyName);
             }
 
             printf("\nEscolha o ID da Residência: ");
@@ -359,12 +367,16 @@ int main(void) {
 
         scanf("%i", &userAction);
 
+
         if (userAction == 1){
             for(int i=0; i<contResident; i++){
-                if(residents[i]->id == currentUserID){
+                // if(residents[i]->id == currentUserID){
+                if(strcmp(residents[i]->id, currentUserID) == 0){
                     printf("Olá %s, informe as atividades realizadas hoje:", residents[i]->name);
-                    residencyID = (int)residents[i]->residency_id;
-                    visualizeAndMarkActivities(rc, db, err_msg, residencyID);
+                    // residencyID = (int)residents[i]->residency_id;
+
+                    // printf("ResidencyID de %s: %s", residents[i]->name, residents[i]->residency_id);
+                    visualizeAndMarkActivities(rc, db, err_msg, residents[i]->residency_id);
                 }
             }
         }
@@ -395,12 +407,19 @@ int callbackManager(void *NotUsed, int argc, char **argv, char **azColName) {
 int callbackResident(void *NotUsed, int argc, char **argv, char **azColName) {
     NotUsed = 0;
 
+    // char c = argv[0];
+    // char* ponteiroChar = &c;
+    // void* ponteiroVoid = ponteiroChar;
+    // int* ponteiroInt = ponteiroVoid;
+
     residents[contResident] = (struct Resident *)malloc(1 * sizeof(struct Resident));
 
-    residents[contResident]->id = 1;
+    // residents[contResident]->id = contResident;
+    strcpy(residents[contResident]->id, argv[0]);
     strcpy(residents[contResident]->name, argv[1]);
     strcpy(residents[contResident]->password, argv[2]);
     strcpy(residents[contResident]->preceptor_id, argv[3]);
+    strcpy(residents[contResident]->residency_id, argv[4]);
 
     contResident++;
     
@@ -412,8 +431,10 @@ int callbackResidencies(void *NotUsed, int argc, char **argv, char **azColName){
 
     residencies[contResidency] = (struct Residency *)malloc(1 * sizeof(struct Residency));
 
-    residencies[contResidency]->id = contResidency;
+    strcpy(residencies[contResidency]->id, argv[0]);
+    // residencies[contResidency]->id = contResidency;
     strcpy(residencies[contResidency]->residencyName, argv[1]);
+    strcpy(residencies[contResidency]->residency_course, argv[2]);
 
     contResidency++;
 
@@ -682,7 +703,8 @@ int authenticateResident(int rc, sqlite3 *db, char *err_msg){
         if(strcmp(residents[i]->name, nome) == 0 && strcmp(residents[i]->password, senha) == 0){
             autenticado = 3;
             if(autenticado == 3){
-                currentUserID = residents[i]->id;
+                strcpy(currentUserID, residents[i]->id);
+                // currentUserID = residents[i]->id;
                 break;
             }
         }else{
@@ -697,8 +719,8 @@ int authenticateResident(int rc, sqlite3 *db, char *err_msg){
     return autenticado;
 }
 
-int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, int residencyID){
-    char *sqlActivities = "SELECT * FROM activities WHERE residency_id = ?";
+int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]){
+    char *sqlActivities = "SELECT * FROM activities WHERE cast(residency_id AS INTEGER) = ?";
     sqlite3_stmt *activity_stmt;
 
     rc = sqlite3_prepare_v2(db, sqlActivities, -1, &activity_stmt, 0);
@@ -708,7 +730,9 @@ int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, int residency
         return 1;
     }
 
-    sqlite3_bind_int(activity_stmt, 1, residencyID);
+    // sqlite3_bind_int(activity_stmt, 1, id);
+    sqlite3_bind_text(activity_stmt, 1, id, strlen(id), NULL);
+
     printf("\nAtividades da Residência: \n\n");
 
     while ((rc = sqlite3_step(activity_stmt)) == SQLITE_ROW) {
@@ -717,13 +741,49 @@ int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, int residency
         const unsigned char *description = sqlite3_column_text(activity_stmt, 2);
         int max_grade = sqlite3_column_int(activity_stmt, 3);
         printf("ID: %i -- Nome: %s -- Descrição: %s -- Nota Máxima: %d\n", id, name, description, max_grade);
+
+        // currentUserID
+        // activityID
+        // residencyID
+        // done -> 1
     }
 
     sqlite3_finalize(activity_stmt);
 
     return 1;
-
-
-
 }
 //status = authenticatePreceptor(rx, db, err_msg);
+
+// Activities
+// id
+// name
+// description
+// max_grade
+// residency_id
+
+// Residents
+// id
+// name
+// password
+// preceptor_id
+// residency_id
+// frequency
+
+// atividade - residente
+// activity_id
+// residency_id
+// user_id
+// done
+// grade
+
+// FLUXO DE RESIDENTE
+// MARCAR FREQUÊNCIA DE ATIVIDADE -> insert into activities_residents VALUES (activity_id, user_id, done, grade) (id, id, 1, NULL)
+// VISUALIZAR MINHAS ATIVIDADES -> select * from activites_residents where user_id = ? and done == 1
+
+// FLUXO DO PRECEPTOR
+// LISTAR RESIDENTES DO PRECEPTOR -> select * from residents where preceptor_id == PRECEPTOR_ID;
+// LISTAR ATIVIDADES DO RESIDENTE ESPECÍFICO: select * from activities_residents WHERE user_id == USER_ID_ESCOLHIDO
+// ESCOLHER ATIVIDADE DO RESIDENTE: select * from activies where id == activity_id
+// DAR NOTA: insert into tabela (grade) values (nota do preceptor)
+
+
