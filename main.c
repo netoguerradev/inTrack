@@ -23,12 +23,6 @@ int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]);
 int markFrequency(int rc, sqlite3 *db, char *err_msg, char id[10]);
 void viewResidentData(int *rc, sqlite3 *db, char preceptor_id[10]);
 
-
-
-
-
-
-
 struct Manager{
     int id;
     char name[200];
@@ -402,6 +396,7 @@ int main(void) {
                 }
             }
         }
+        // REGISTRA FREQUENCIA
         if (userAction == 2){
             markFrequency(rc, db, err_msg, currentUserID);
         }
@@ -745,6 +740,8 @@ int authenticateResident(int rc, sqlite3 *db, char *err_msg){
 }
 
 int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]){
+    //VISUALIZAR
+    
     char *sqlActivities = "SELECT * FROM activities WHERE cast(residency_id AS INTEGER) = ?";
     sqlite3_stmt *activity_stmt;
 
@@ -772,9 +769,35 @@ int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]){
         // residencyID
         // done -> 1
     }
-
     sqlite3_finalize(activity_stmt);
+    
+    sqlite3_stmt *stmt;
+    char *sql = "INSERT INTO activities_residents(activity_id, residency_id, user_id, done) VALUES(?,?,?,1)";
 
+    rc = sqlite3_prepare(db, sql, -1, &stmt, 0);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));    
+        return 1;
+    }    
+
+    int activityId;
+    int residencyId;
+    char userId[10];
+
+    scanf("Informe o ID da atividade que quer Registrar", &activityId);
+    strcmp(userId, currentUserID);
+
+    sqlite3_bind_int(stmt, 1, activityId);
+    sqlite3_bind_int(stmt, 2, residencyId);
+    sqlite3_bind_text(stmt, 3, userId, strlen(userId), NULL);
+    rc = sqlite3_step(stmt);
+
+    if (rc != SQLITE_DONE) {
+        printf("execution failed: %s", sqlite3_errmsg(db));
+    }
+
+    sqlite3_finalize(stmt);
     return 1;
 }
 
