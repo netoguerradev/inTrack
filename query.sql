@@ -31,3 +31,6 @@
 -- WHERE user_id = 1;
 
 -- INSERT INTO activities_residents (activity_id, residency_id, user_id, done) VALUES (1, 1, 1, 1);
+-- INSERT INTO activities_residents (activity_id, residency_id, user_id, done) VALUES (1, '1', '1', 1);
+
+-- DELETE from activities_residents where id = 3;

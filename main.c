@@ -752,27 +752,24 @@ int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]){
         return 1;
     }
 
-    // sqlite3_bind_int(activity_stmt, 1, id);
     sqlite3_bind_text(activity_stmt, 1, id, strlen(id), NULL);
 
     printf("\nAtividades da Residência: \n\n");
-
     while ((rc = sqlite3_step(activity_stmt)) == SQLITE_ROW) {
         int id = sqlite3_column_int(activity_stmt, 0);
         const unsigned char *name = sqlite3_column_text(activity_stmt, 1);
         const unsigned char *description = sqlite3_column_text(activity_stmt, 2);
         int max_grade = sqlite3_column_int(activity_stmt, 3);
         printf("ID: %i -- Nome: %s -- Descrição: %s -- Nota Máxima: %d\n", id, name, description, max_grade);
-
-        // currentUserID
-        // activityID
-        // residencyID
-        // done -> 1
     }
     sqlite3_finalize(activity_stmt);
+
+    int activityId;
+    printf("\nInforme o ID da atividade que deseja registrar: ");
+    scanf("%i", &activityId);
     
     sqlite3_stmt *stmt;
-    char *sql = "INSERT INTO activities_residents(activity_id, residency_id, user_id, done) VALUES(?,?,?,1)";
+    char *sql = "INSERT INTO activities_residents(activity_id, residency_id, user_id, done) VALUES (?,?,?,1)";
 
     rc = sqlite3_prepare(db, sql, -1, &stmt, 0);
 
@@ -781,16 +778,9 @@ int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]){
         return 1;
     }    
 
-    int activityId;
-    int residencyId;
-    char userId[10];
-
-    scanf("Informe o ID da atividade que quer Registrar", &activityId);
-    strcmp(userId, currentUserID);
-
     sqlite3_bind_int(stmt, 1, activityId);
-    sqlite3_bind_int(stmt, 2, residencyId);
-    sqlite3_bind_text(stmt, 3, userId, strlen(userId), NULL);
+    sqlite3_bind_text(stmt, 2, id, strlen(id), NULL);
+    sqlite3_bind_text(stmt, 3, currentUserID, strlen(currentUserID), NULL);
     rc = sqlite3_step(stmt);
 
     if (rc != SQLITE_DONE) {
@@ -798,6 +788,8 @@ int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]){
     }
 
     sqlite3_finalize(stmt);
+
+    printf("\nAtividade Registrada com Sucesso!\n");
     return 1;
 }
 
