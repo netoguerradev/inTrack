@@ -21,6 +21,13 @@ int visualizeResidencyActivities(int rc, sqlite3 *db, char *err_msg);
 int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]);
 
 int markFrequency(int rc, sqlite3 *db, char *err_msg, char id[10]);
+void viewResidentData(int *rc, sqlite3 *db, char preceptor_id[10]);
+
+
+
+
+
+
 
 struct Manager{
     int id;
@@ -349,30 +356,22 @@ int main(void) {
         scanf("%i", &userAction);
 
         if (userAction == 1) {
-            printf("Preceptor ID: %s", currentPreceptorID);
-            char *sqlResidents = "SELECT * FROM residents WHERE cast(preceptor_id AS INTEGER) = ?";
-            sqlite3_stmt *residents_stmt;
+            //print preceptor ID
+            printf("\nID do Preceptor: %s\n", currentPreceptorID);
 
+            char *sqlResidents = "SELECT * FROM residents WHERE preceptor_id = ?";
+            sqlite3_stmt *residents_stmt;
 
             rc = sqlite3_prepare_v2(db, sqlResidents, -1, &residents_stmt, 0);
 
-                    
             if (rc != SQLITE_OK) {
                 fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
                 return 1;
             }
 
-            sqlite3_bind_text(residents_stmt, 1, currentPreceptorID, strlen(currentPreceptorID), NULL);
+            sqlite3_bind_text(residents_stmt, 1, currentPreceptorID, -1, SQLITE_STATIC);
 
-            printf("\nAtividades da Residência: \n\n");
-
-            while ((rc = sqlite3_step(residents_stmt)) == SQLITE_ROW) {
-                int id = sqlite3_column_int(residents_stmt, 0);
-                int frequency = sqlite3_column_int(residents_stmt, 5);
-                const unsigned char *name = sqlite3_column_text(residents_stmt, 1);
-                printf("ID: %i -- Nome: %s -- Frequência: %i\n", id, name, frequency);
-
-            }
+            viewResidentData(&rc, db, currentPreceptorID);
 
             sqlite3_finalize(residents_stmt);
         }
@@ -809,6 +808,53 @@ int markFrequency(int rc, sqlite3 *db, char *err_msg, char id[10]) {
     return 1;
 }
 
+void viewResidentData(int *rc, sqlite3 *db, char preceptor_id[10]) {
+    sqlite3_stmt *stmt;
+
+    // Listar residentes do preceptor
+    char *sqlListResidents = "SELECT * FROM residents WHERE preceptor_id = ?";
+    *rc = sqlite3_prepare_v2(db, sqlListResidents, -1, &stmt, 0);
+
+    if (*rc != SQLITE_OK) {
+        printf("Não foi possível preparar a declaração: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_bind_text(stmt, 1, preceptor_id, -1, SQLITE_STATIC);
+
+    printf("\nResidents:\n");
+    while ((*rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        printf("ID: %s\n", sqlite3_column_text(stmt, 0));
+        printf("Nome: %s\n", sqlite3_column_text(stmt, 1));
+        printf("Frequência: %s\n", sqlite3_column_text(stmt, 5));
+    }
+
+    sqlite3_finalize(stmt);
+
+    // Listar atividades já feitas pelos residentes
+    printf("\nCompleted Activities of Residents:\n");
+    char *sqlListCompletedActivities = "SELECT residents.name AS residentName, activities.name AS activityName, activities.description AS activityDescription "
+                                       "FROM residents "
+                                       "INNER JOIN activities_residents ON residents.id = activities_residents.user_id "
+                                       "INNER JOIN activities ON activities_residents.activity_id = activities.id "
+                                       "WHERE residents.preceptor_id = ? AND activities_residents.done = 1";
+    *rc = sqlite3_prepare_v2(db, sqlListCompletedActivities, -1, &stmt, 0);
+
+    if (*rc != SQLITE_OK) {
+        printf("Não foi possível preparar a declaração: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_bind_text(stmt, 1, preceptor_id, -1, SQLITE_STATIC);
+
+    while ((*rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        printf("Residente: %s\n", sqlite3_column_text(stmt, 0));
+        printf("Atividade: %s\n", sqlite3_column_text(stmt, 1));
+        printf("Descrição: %s\n", sqlite3_column_text(stmt, 2));
+    }
+
+    sqlite3_finalize(stmt);
+}
 
 //status = authenticatePreceptor(rx, db, err_msg);
 
