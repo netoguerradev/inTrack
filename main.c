@@ -45,6 +45,7 @@ struct Residency{
 
 struct Preceptor{
     int id;
+    char charId[10];
     char name[200];
     char password[200];
     int residency_id;
@@ -65,8 +66,8 @@ int contManager = 0;
 int contResident = 0;
 int contPreceptor = 0;
 int contResidency = 0;
-// int currentUserID = 0;
 char currentUserID[10];
+char currentPreceptorID[10];
 
 int main(void) {
     int autenticacao, tipo_de_usuario;
@@ -82,12 +83,6 @@ int main(void) {
         return 1;
     }
 
-    // activity_id
-    // residency_id
-    // user_id
-    // done
-    // grade
-    
     char *sql = "CREATE TABLE IF NOT EXISTS managers(id INTEGER PRIMARY KEY, name TEXT, password TEXT);"
                 "CREATE TABLE IF NOT EXISTS preceptors(id INTEGER PRIMARY KEY, name TEXT, password TEXT, residency_id INTEGER);"
                 "CREATE TABLE IF NOT EXISTS residents(id INTEGER PRIMARY KEY, name TEXT, password TEXT, preceptor_id INTEGER, residency_id INTEGER, frequency INTEGER DEFAULT 0);"
@@ -344,6 +339,44 @@ int main(void) {
     }
     // ENTRA NAS AÇÕES DO PRECEPTOR
     while(status == 2) {
+        int userAction;
+                
+        printf("\n---- Ações do Preceptor ----\n");
+        printf("\nVisualizar residentes - 1");
+        printf("\nSair - 4");
+        printf("\nDigite o que você deseja fazer: ");
+
+        scanf("%i", &userAction);
+
+        if (userAction == 1) {
+            printf("Preceptor ID: %s", currentPreceptorID);
+            char *sqlResidents = "SELECT * FROM residents WHERE cast(preceptor_id AS INTEGER) = ?";
+            sqlite3_stmt *residents_stmt;
+
+
+            rc = sqlite3_prepare_v2(db, sqlResidents, -1, &residents_stmt, 0);
+
+                    
+            if (rc != SQLITE_OK) {
+                fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
+                return 1;
+            }
+
+            sqlite3_bind_text(residents_stmt, 1, currentPreceptorID, strlen(currentPreceptorID), NULL);
+
+            printf("\nAtividades da Residência: \n\n");
+
+            while ((rc = sqlite3_step(residents_stmt)) == SQLITE_ROW) {
+                int id = sqlite3_column_int(residents_stmt, 0);
+                int frequency = sqlite3_column_int(residents_stmt, 5);
+                const unsigned char *name = sqlite3_column_text(residents_stmt, 1);
+                printf("ID: %i -- Nome: %s -- Frequência: %i\n", id, name, frequency);
+
+            }
+
+            sqlite3_finalize(residents_stmt);
+
+        }
     }
     // ENTRA NAS AÇÕES DO RESIDENTE
     while(status == 3) {
@@ -438,6 +471,7 @@ int callbackPreceptor(void *NotUsed, int argc, char **argv, char **azColName) {
     preceptors[contPreceptor] = (struct Preceptor *)malloc(1 * sizeof(struct Preceptor));
 
     preceptors[contPreceptor]->id = contPreceptor;
+    strcpy(preceptors[contPreceptor]->charId, argv[0]);
     strcpy(preceptors[contPreceptor]->name, argv[1]);
     strcpy(preceptors[contPreceptor]->password, argv[2]);
 
@@ -500,6 +534,7 @@ int authenticatePreceptor(int rc, sqlite3 *db,char *err_msg){
         if(strcmp(preceptors[i]->name, nome) == 0 && strcmp(preceptors[i]->password, senha) == 0){
             autenticado = 2;
             if(autenticado == 2) {
+                strcpy(currentPreceptorID, preceptors[i]->charId);
                 break;
             }
         }else{
