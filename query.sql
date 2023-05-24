@@ -4,5 +4,9 @@
 -- SET preceptor_id = 2
 -- WHERE id = 1;
 
-INSERT INTO residents (name, password, preceptor_id, residency_id, frequency)
-VALUES ('joao', '123', 3, 2, 0);
+-- INSERT INTO residents (name, password, preceptor_id, residency_id, frequency)
+-- VALUES ('joao', '123', 3, 2, 0);
+
+UPDATE residents
+SET name = 'luis'
+WHERE id = 2;

@@ -34,7 +34,7 @@ struct Resident{
     char password[200];
     char preceptor_id[200];
     char residency_id[200];
-    int frequency;
+    char frequency[10];
 };
 
 struct Residency{
@@ -375,7 +375,6 @@ int main(void) {
             }
 
             sqlite3_finalize(residents_stmt);
-
         }
     }
     // ENTRA NAS AÇÕES DO RESIDENTE
@@ -444,6 +443,7 @@ int callbackResident(void *NotUsed, int argc, char **argv, char **azColName) {
     strcpy(residents[contResident]->password, argv[2]);
     strcpy(residents[contResident]->preceptor_id, argv[3]);
     strcpy(residents[contResident]->residency_id, argv[4]);
+    strcpy(residents[contResident]->frequency, argv[5]);
 
     contResident++;
     
@@ -779,40 +779,37 @@ int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]){
     return 1;
 }
 
-int markFrequency(int rc, sqlite3 *db, char *err_msg, char id[10]){
+int markFrequency(int rc, sqlite3 *db, char *err_msg, char id[10]) {
     sqlite3_stmt *update_stmt;
 
-    char *sql = "UPDATE residents SET frequency = ? WHERE cast(id AS INTEGER) = ?";
+    char *sql = "UPDATE residents SET frequency = frequency + 1 WHERE cast(id AS INTEGER) = ?";
 
     rc = sqlite3_prepare_v2(db, sql, -1, &update_stmt, 0);
     if (rc != SQLITE_OK) {
-    fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
-    return 1;
-    }
-    int frequency = 0;
-    for(int i=0;i<contResident;i++){
-        if(strcmp(residents[i]->id, id) == 0){
-            residents[i]->frequency = residents[i]->frequency + 1;
-            frequency = residents[i]->frequency;
-        }
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
+        return 1;
     }
 
-    rc = sqlite3_bind_int(update_stmt, 1, frequency);
-    if (rc != SQLITE_OK) {
-    fprintf(stderr, "Cannot bind value: %s\n", sqlite3_errmsg(db));
-    return 1;
+    rc = sqlite3_bind_text(update_stmt, 1, id, strlen(id), NULL);
+
+    if (rc != SQLITE_DONE) {
+        printf("error: %s\n", sqlite3_errmsg(db));
     }
 
     rc = sqlite3_step(update_stmt);
+
     if (rc != SQLITE_DONE) {
-    fprintf(stderr, "Cannot execute statement: %s\n", sqlite3_errmsg(db));
-    return 1;
+        printf("execution failed: %s", sqlite3_errmsg(db));
     }
 
-    sqlite3_finalize(update_stmt);
+    sqlite3_finalize(update_stmt); 
+
     printf("\nFrequencia Realizada com Sucesso!\n");
 
+    return 1;
 }
+
+
 //status = authenticatePreceptor(rx, db, err_msg);
 
 // Activities
