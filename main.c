@@ -70,7 +70,7 @@ int contResidency = 0;
 char currentUserID[10];
 char currentPreceptorID[10];
 
-int main(void) {
+int main() {
     int autenticacao, tipo_de_usuario;
     sqlite3 *db;
     char *err_msg = 0;
@@ -350,24 +350,32 @@ int main(void) {
         scanf("%i", &userAction);
 
         if (userAction == 1) {
-            //print preceptor ID
-            printf("\nID do Preceptor: %s\n", currentPreceptorID);
+            viewResidentData(&rc, db, currentPreceptorID);
+        }
 
-            char *sqlResidents = "SELECT * FROM residents WHERE preceptor_id = ?";
-            sqlite3_stmt *residents_stmt;
+        if (userAction == 2) {
+            sqlite3_stmt *stmt;
 
-            rc = sqlite3_prepare_v2(db, sqlResidents, -1, &residents_stmt, 0);
+            char *sqlListResidents = "SELECT * FROM residents WHERE preceptor_id = ?";
+            rc = sqlite3_prepare_v2(db, sqlListResidents, -1, &stmt, 0);
 
             if (rc != SQLITE_OK) {
-                fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
-                return 1;
+            printf("Não foi possível preparar a declaração: %s\n", sqlite3_errmsg(db));
+            return;
             }
 
-            sqlite3_bind_text(residents_stmt, 1, currentPreceptorID, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 1, currentPreceptorID, -1, SQLITE_STATIC);
 
-            viewResidentData(&rc, db, currentPreceptorID);
+            printf("Escolha o residente que você deseja avaliar: \n");
 
-            sqlite3_finalize(residents_stmt);
+            printf("\nResidents:\n");
+            while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+                printf("ID: %s\n", sqlite3_column_text(stmt, 0));
+                printf("Nome: %s\n", sqlite3_column_text(stmt, 1));
+                printf("Frequência: %s\n", sqlite3_column_text(stmt, 5));
+            }
+
+            sqlite3_finalize(stmt);
         }
     }
     // ENTRA NAS AÇÕES DO RESIDENTE
