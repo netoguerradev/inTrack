@@ -357,79 +357,6 @@ int main() {
 
         if (userAction == 2) {
             gradeResident(rc, db, err_msg);
-
-            // sqlite3_stmt *stmt;
-            // int residentId;
-
-            // char *sqlListResidents = "SELECT * FROM residents WHERE preceptor_id = ?";
-            // rc = sqlite3_prepare_v2(db, sqlListResidents, -1, &stmt, 0);
-
-            // if (rc != SQLITE_OK) {
-            //     printf("Não foi possível preparar a declaração: %s\n", sqlite3_errmsg(db));
-            //     return 0;
-            // }
-
-            // sqlite3_bind_text(stmt, 1, currentPreceptorID, -1, SQLITE_STATIC);
-
-            // printf("\n------ Residentes ------\n");
-            // while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-            //     printf("ID: %s\n", sqlite3_column_text(stmt, 0));
-            //     printf("Nome: %s\n", sqlite3_column_text(stmt, 1));
-            //     printf("Frequência: %s\n", sqlite3_column_text(stmt, 5));
-            // }
-
-            // sqlite3_finalize(stmt);
-
-            // printf("\nEscolha o residente que você deseja avaliar: ");
-            // scanf("%i", &residentId);
-
-            // char *sqlListCompletedActivities = "SELECT activity_id, residents.name AS residentName, activities.name AS activityName, activities.description AS activityDescription "
-            //                         "FROM residents "
-            //                         "INNER JOIN activities_residents ON residents.id = activities_residents.user_id "
-            //                         "INNER JOIN activities ON activities_residents.activity_id = activities.id "
-            //                                 "WHERE residents.id = ? AND activities_residents.done = 1";
-            // rc = sqlite3_prepare_v2(db, sqlListCompletedActivities, -1, &stmt, 0);
-
-            // if (rc != SQLITE_OK) {
-            //     printf("Não foi possível preparar a declaração: %s\n", sqlite3_errmsg(db));
-            //     return 0;
-            // }
-
-            // sqlite3_bind_int(stmt, 1, residentId);
-
-            // printf("\n------ Atividades do residente ------\n");
-            // while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-            //     printf("ID: %i --- Atividade: %s --- Descrição: %s\n", sqlite3_column_int(stmt, 0), sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt, 2));
-            // }
-
-            // sqlite3_finalize(stmt);
-
-            // int activityId, grade;
-
-            // printf("\nEscolha a atividade que você deseja avaliar: ");
-            // scanf("%i", &activityId);
-
-            // printf("Digite a nota da atividade: ");
-            // scanf("%i", &grade);
-
-            // sqlite3_stmt *stmtUpdate;
-            // char *sqlUpdateGrade = "UPDATE activities_residents SET grade = ? WHERE user_id = ? AND activity_id = ?;";
-            // rc = sqlite3_prepare_v2(db, sqlUpdateGrade, -1, &stmtUpdate, 0);
-
-            // if (rc != SQLITE_OK) {
-            //     printf("Não foi possível preparar a declaração: %s\n", sqlite3_errmsg(db));
-            //     return 0;
-            // }
-
-            // sqlite3_bind_int(stmtUpdate, 1, grade);
-            // sqlite3_bind_int(stmtUpdate, 2, residentId);
-            // sqlite3_bind_int(stmtUpdate, 3, activityId);
-
-            // sqlite3_step(stmtUpdate);
-
-            // sqlite3_finalize(stmtUpdate);
-
-            // printf("\nNota atualizada com sucesso!");
         }
     }
     // ENTRA NAS AÇÕES DO RESIDENTE
@@ -988,15 +915,18 @@ int gradeResident(int rc, sqlite3 *db, char *err_msg) {
     sqlite3_finalize(stmt);
 
     int activityId, grade;
+    char feedback[1000];
 
     printf("\nEscolha a atividade que você deseja avaliar: ");
     scanf("%i", &activityId);
 
     printf("Digite a nota da atividade: ");
     scanf("%i", &grade);
+    printf("De o feedback para o residente da atividade: ");
+    scanf(" %[^\n\r]", feedback);
 
     sqlite3_stmt *stmtUpdate;
-    char *sqlUpdateGrade = "UPDATE activities_residents SET grade = ? WHERE user_id = ? AND activity_id = ?;";
+    char *sqlUpdateGrade = "UPDATE activities_residents SET grade = ?, feedback = ? WHERE user_id = ? AND activity_id = ?;";
     rc = sqlite3_prepare_v2(db, sqlUpdateGrade, -1, &stmtUpdate, 0);
 
     if (rc != SQLITE_OK) {
@@ -1005,14 +935,15 @@ int gradeResident(int rc, sqlite3 *db, char *err_msg) {
     }
 
     sqlite3_bind_int(stmtUpdate, 1, grade);
-    sqlite3_bind_int(stmtUpdate, 2, residentId);
-    sqlite3_bind_int(stmtUpdate, 3, activityId);
+    sqlite3_bind_text(stmt, 2, feedback, strlen(feedback), NULL);
+    sqlite3_bind_int(stmtUpdate, 3, residentId);
+    sqlite3_bind_int(stmtUpdate, 4, activityId);
 
     sqlite3_step(stmtUpdate);
 
     sqlite3_finalize(stmtUpdate);
 
-    printf("\nNota atualizada com sucesso!");
+    printf("\nAvaliação feita com sucesso!");
     return 1;
 }
 

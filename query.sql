@@ -40,3 +40,4 @@
 -- WHERE user_id = ? and activity_id = ?;
 
 -- UPDATE activities_residents SET grade = ? WHERE user_id = ? and activity_id = ?;
+UPDATE activities_residents SET grade = 6, feedback = 'aooiadjoai aoidsja' WHERE user_id = 1 AND activity_id = 3;
