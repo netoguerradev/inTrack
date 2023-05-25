@@ -378,6 +378,7 @@ int main(void) {
         printf("\n---- Ações do Residente ----\n");
         printf("\nRegistrar Atividade Realizada - 1");
         printf("\nRegistrar Frequência - 2");
+        printf("\nVisualizar Feedbacks do Preceptor - 3");
         printf("\nSair - 4");
         printf("\nDigite o que você deseja fazer: ");
 
@@ -399,6 +400,10 @@ int main(void) {
         // REGISTRA FREQUENCIA
         if (userAction == 2){
             markFrequency(rc, db, err_msg, currentUserID);
+        }
+        //VISUALIZA NOTAS E FEEDBACKS DO PRECEPTOR
+        if(userAction == 3){
+
         }
         if (userAction == 4) {
             status = 0;
