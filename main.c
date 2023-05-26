@@ -19,6 +19,7 @@ int createActivity(int rc, sqlite3 *db, char *err_msg);
 
 int visualizeResidencyActivities(int rc, sqlite3 *db, char *err_msg);
 int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]);
+void visualizeFeedback(int *rc, sqlite3 *db, char resident_id[10]);
 
 int markFrequency(int rc, sqlite3 *db, char *err_msg, char id[10]);
 void viewResidentData(int *rc, sqlite3 *db, char preceptor_id[10]);
@@ -90,7 +91,7 @@ int main() {
                 "CREATE TABLE IF NOT EXISTS residents(id INTEGER PRIMARY KEY, name TEXT, password TEXT, preceptor_id INTEGER, residency_id INTEGER, frequency INTEGER DEFAULT 0);"
                 "CREATE TABLE IF NOT EXISTS residencies(id INTEGER PRIMARY KEY, residencyName TEXT, residency_course TEXT);"
                 "CREATE TABLE IF NOT EXISTS activities(id INTEGER PRIMARY KEY, name TEXT, description TEXT, max_grade INTEGER, residency_id INTEGER REFERENCES residencies(id));"
-                "CREATE TABLE IF NOT EXISTS activities_residents(id INTEGER PRIMARY KEY, activity_id INTEGER, residency_id INTEGER, user_id INTEGER, done INTEGER, grade INTEGER);";
+                "CREATE TABLE IF NOT EXISTS activities_residents(id INTEGER PRIMARY KEY, feedback TEXT, activity_id INTEGER, residency_id INTEGER, user_id INTEGER, done INTEGER, grade INTEGER);";
 
     rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
     
@@ -392,7 +393,7 @@ int main() {
         }
         //VISUALIZA NOTAS E FEEDBACKS DO PRECEPTOR
         if(userAction == 3){
-
+            visualizeFeedback(&rc, db, currentUserID);
         }
         if (userAction == 4) {
             status = 0;
@@ -947,6 +948,57 @@ int gradeResident(int rc, sqlite3 *db, char *err_msg) {
     return 1;
 }
 
+void visualizeFeedback(int *rc, sqlite3 *db, char resident_id[10]){
+     sqlite3_stmt *stmt;
+
+    // Listar residentes do preceptor
+    char *sqlListActivitiesResidents = "SELECT * FROM activities_residents WHERE user_id = ?";
+    *rc = sqlite3_prepare_v2(db, sqlListActivitiesResidents, -1, &stmt, 0);
+
+    if (*rc != SQLITE_OK) {
+        printf("Não foi possível preparar a declaração: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    // Listar atividades já feitas pelos residentes
+    char *sqlListCompletedActivities = "SELECT residents.name AS residentName, activities.name AS activityName, activities.description AS activityDescription "
+                                       "FROM residents "
+                                       "INNER JOIN activities_residents ON residents.id = activities_residents.user_id "
+                                       "INNER JOIN activities ON activities_residents.activity_id = activities.id "
+                                       "WHERE residents.preceptor_id = ? AND activities_residents.done = 1";
+    *rc = sqlite3_prepare_v2(db, sqlListCompletedActivities, -1, &stmt, 0);
+
+    if (*rc != SQLITE_OK) {
+        printf("Não foi possível preparar a declaração: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_bind_text(stmt, 1, resident_id, -1, SQLITE_STATIC);
+
+    while ((*rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        printf("\n");
+        printf("Atividade: %s\n", sqlite3_column_text(stmt, 1));
+    }
+
+    sqlite3_finalize(stmt);
+
+    char *sqlListFeedbackResidents = "SELECT * FROM activities_residents";
+    *rc = sqlite3_prepare_v2(db, sqlListFeedbackResidents, -1, &stmt, 0);
+
+    if (*rc != SQLITE_OK) {
+        printf("Não foi possível preparar a declaração: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_bind_text(stmt, 1, resident_id, -1, SQLITE_STATIC);
+
+    while ((*rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        printf("Nota: %s\n", sqlite3_column_text(stmt, 6));
+        printf("Feedback: %s\n", sqlite3_column_text(stmt, 1));
+    }
+
+    sqlite3_finalize(stmt);
+}
 //status = authenticatePreceptor(rx, db, err_msg);
 
 // Activities
