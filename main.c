@@ -1,7 +1,7 @@
 // gcc -o main main.c sqlite3.c sqlite3.h
 // login: preceptor / senha: 123
 
-#include "sqlite3.h"
+#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +20,7 @@ int createActivity(int rc, sqlite3 *db, char *err_msg);
 int visualizeResidencyActivities(int rc, sqlite3 *db, char *err_msg);
 int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]);
 void visualizeFeedback(int *rc, sqlite3 *db, char resident_id[10]);
+void visualizeMarksAndFreq(int *rc, sqlite3 *db, char *err_msg);
 
 int markFrequency(int rc, sqlite3 *db, char *err_msg, char id[10]);
 void viewResidentData(int *rc, sqlite3 *db, char preceptor_id[10]);
@@ -166,6 +167,7 @@ int main() {
         printf("\nSair - 4");
         printf("\nCadastrar Atividades - 5");
         printf("\nVisualizar Atividades preceptores - 6");
+        printf("\nVisualizar Desempenho e Frequencia dos Residentes - 7");
         printf("\nDigite o que você deseja fazer: ");
 
         scanf("%i", &userAction);
@@ -338,6 +340,10 @@ int main() {
         //CASO 6, LISTA AS ATIVIDADES
         if(userAction == 6) {
             visualizeResidencyActivities(rc, db, err_msg);
+        }
+        //CASO 7, VER NOTAS E FREQUENCIAS
+        if(userAction == 7) {
+            visualizeMarksAndFreq(&rc, db, err_msg);
         }
     }
     // ENTRA NAS AÇÕES DO PRECEPTOR
@@ -998,6 +1004,29 @@ void visualizeFeedback(int *rc, sqlite3 *db, char resident_id[10]){
     }
 
     sqlite3_finalize(stmt);
+}
+
+void visualizeMarksAndFreq(int *rc, sqlite3 *db, char *err_msg){
+    scanf("Informe o ID do Residente para ver as Notas: ");
+    char *sqlResidents = "SELECT * FROM residents";
+    sqlite3_exec(db, sqlResidents, callbackResident, 0, &err_msg);
+
+    printf("\nLista dos Residentes: \n\n");
+
+    for(int i=0;i<contResident;i++){
+        printf("ID: %s -- Nome: %s -- Frequencia: %s\n", residents[i]->id, residents[i]->name, residents[i]->frequency);
+    }
+
+    int resident_id;
+    printf("\nEscolha o ID do Residente: ");
+    scanf("%i", &resident_id);
+
+    while(resident_id > contResident || resident_id < 0){
+        printf("Residente nao encontrado, por favor, digite novamente.\n");
+        printf("Escolha o ID do Residente: ");
+        scanf("%i",&resident_id);
+        printf("\n");
+    }
 }
 //status = authenticatePreceptor(rx, db, err_msg);
 
