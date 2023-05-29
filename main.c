@@ -1009,7 +1009,7 @@ void visualizeFeedback(int *rc, sqlite3 *db, char resident_id[10]){
 void visualizeMarksAndFreq(int *rc, sqlite3 *db, char *err_msg){
     scanf("Informe o ID do Residente para ver as Notas: ");
     char *sqlResidents = "SELECT * FROM residents";
-    sqlite3_exec(db, sqlResidents, callbackResident, 0, &err_msg);
+    *rc = sqlite3_exec(db, sqlResidents, callbackResident, 0, &err_msg);
 
     printf("\nLista dos Residentes: \n\n");
 
@@ -1027,6 +1027,11 @@ void visualizeMarksAndFreq(int *rc, sqlite3 *db, char *err_msg){
         scanf("%i",&resident_id);
         printf("\n");
     }
+
+    char resident_id_char[10];
+    resident_id_char[10] = resident_id;
+    visualizeFeedback(rc, db, resident_id_char);
+
 }
 //status = authenticatePreceptor(rx, db, err_msg);
 
