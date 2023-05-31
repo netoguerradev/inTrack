@@ -1029,7 +1029,7 @@ void visualizeMarksAndFreq(int *rc, sqlite3 *db, char *err_msg){
     }
 
     sqlite3_stmt *stmt;
-    char *sqlListCompletedActivities = "SELECT activity_id, residents.name AS residentName, activities.name AS activityName, activities.description AS activityDescription "
+    char *sqlListCompletedActivities = "SELECT activity_id, residents.name AS residentName, activities.name AS activityName, activities.description AS activityDescription, activities_residents.grade "
                         "FROM residents "
                         "INNER JOIN activities_residents ON residents.id = activities_residents.user_id "
                         "INNER JOIN activities ON activities_residents.activity_id = activities.id "
@@ -1044,7 +1044,7 @@ void visualizeMarksAndFreq(int *rc, sqlite3 *db, char *err_msg){
 
     printf("\n------ Atividades do residente ------\n");
     while ((*(rc) = sqlite3_step(stmt)) == SQLITE_ROW) {
-        printf("ID: %i --- Atividade: %s --- Descrição: %s\n", sqlite3_column_int(stmt, 0), sqlite3_column_text(stmt, 2), sqlite3_column_text(stmt, 3));
+        printf("ID: %i --- Atividade: %s --- Descrição: %s --- Nota: %i\n", sqlite3_column_int(stmt, 0), sqlite3_column_text(stmt, 2), sqlite3_column_text(stmt, 3), sqlite3_column_int(stmt, 4));
     }
 
     sqlite3_finalize(stmt);
