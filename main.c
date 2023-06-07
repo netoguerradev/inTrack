@@ -1,7 +1,14 @@
 // gcc -o main main.c sqlite3.c sqlite3.h
 // login: preceptor / senha: 123
 
-#include <sqlite3.h>
+#ifdef __linux__
+    #include <sqlite3.h>
+    #elif _WIN32
+        #include "sqlite3.h"
+    #else
+        #include <sqlite3.h>
+    #endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -161,13 +168,13 @@ int main() {
         int userAction;
         
         printf("\n---- Ações da Gestão ----\n");
-        printf("\nCriar residência - 1");
-        printf("\nCadastrar residentes - 2");
-        printf("\nCadastrar preceptores - 3");
-        printf("\nSair - 4");
-        printf("\nCadastrar Atividades - 5");
-        printf("\nVisualizar Atividades preceptores - 6");
-        printf("\nVisualizar Desempenho e Frequencia dos Residentes - 7");
+        printf("\nCadastrar Residência - 1");
+        printf("\nCadastrar Residentes - 2");
+        printf("\nCadastrar Preceptores - 3");
+        printf("\nCadastrar Atividades - 4");
+        printf("\nVisualizar Atividades por Residencia - 5");
+        printf("\nVisualizar Desempenho e Frequencia dos Residentes - 6");
+        printf("\nSair - 0");
         printf("\nDigite o que você deseja fazer: ");
 
         scanf("%i", &userAction);
@@ -329,20 +336,20 @@ int main() {
 
             printf("\nPreceptor cadastrado com sucesso.\n"); 
         }
-        // CASO 4, DESLOGA
-        if (userAction == 4) {
+        // CASO 0, DESLOGA
+        if (userAction == 0) {
             status = 0;
         }
-        //CASO 5, CADASTRA AS ATIVIDADES
-        if(userAction == 5) {
+        //CASO 4, CADASTRA AS ATIVIDADES
+        if(userAction == 4) {
             createActivity(rc, db, err_msg);
         }
-        //CASO 6, LISTA AS ATIVIDADES
-        if(userAction == 6) {
+        //CASO 5, LISTA AS ATIVIDADES
+        if(userAction == 5) {
             visualizeResidencyActivities(rc, db, err_msg);
         }
-        //CASO 7, VER NOTAS E FREQUENCIAS
-        if(userAction == 7) {
+        //CASO 6, VER NOTAS E FREQUENCIAS
+        if(userAction == 6) {
             visualizeMarksAndFreq(&rc, db, err_msg);
         }
     }
@@ -351,12 +358,16 @@ int main() {
         int userAction;
                 
         printf("\n---- Ações do Preceptor ----\n");
-        printf("\nVisualizar residentes - 1");
-        printf("\nAvaliar residentes - 2");
-        printf("\nSair - 4");
+        printf("\nVisualizar Residentes - 1");
+        printf("\nAvaliar Residentes - 2");
+        printf("\nSair - 0");
         printf("\nDigite o que você deseja fazer: ");
 
         scanf("%i", &userAction);
+
+        if (userAction == 0) {
+            status = 0;
+        }
 
         if (userAction == 1) {
             viewResidentData(&rc, db, currentPreceptorID);
@@ -850,7 +861,7 @@ void viewResidentData(int *rc, sqlite3 *db, char preceptor_id[10]) {
     sqlite3_finalize(stmt);
 
     // Listar atividades já feitas pelos residentes
-    printf("\nCompleted Activities of Residents:\n");
+    printf("\nMeus Residentes:\n");
     char *sqlListCompletedActivities = "SELECT residents.name AS residentName, activities.name AS activityName, activities.description AS activityDescription "
                                        "FROM residents "
                                        "INNER JOIN activities_residents ON residents.id = activities_residents.user_id "
@@ -867,8 +878,8 @@ void viewResidentData(int *rc, sqlite3 *db, char preceptor_id[10]) {
 
     while ((*rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         printf("Residente: %s\n", sqlite3_column_text(stmt, 0));
-        printf("Atividade: %s\n", sqlite3_column_text(stmt, 1));
-        printf("Descrição: %s\n", sqlite3_column_text(stmt, 2));
+        //printf("Atividade: %s\n", sqlite3_column_text(stmt, 1));
+        //printf("Descrição: %s\n", sqlite3_column_text(stmt, 2));
     }
 
     sqlite3_finalize(stmt);
@@ -916,7 +927,7 @@ int gradeResident(int rc, sqlite3 *db, char *err_msg) {
 
     printf("\n------ Atividades do residente ------\n");
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        printf("ID: %i --- Atividade: %s --- Descrição: %s\n", sqlite3_column_int(stmt, 0), sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt, 2));
+        printf("ID: %i --- Residente: %s --- Atividade: %s\n", sqlite3_column_int(stmt, 0), sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt, 2));
     }
 
     sqlite3_finalize(stmt);
