@@ -16,6 +16,7 @@
 int callbackManager(void *NotUsed, int argc, char **argv, char **azColName);
 int callbackPreceptor(void *NotUsed, int argc, char **argv, char **azColName);
 int callbackResidencies(void *NotUsed, int argc, char **argv, char **azColName);
+int callbackReviews(void *NotUsed, int argc, char **argv, char **azColName);
 
 int authenticateManager(int rc, sqlite3 *db, char *err_msg);
 int authenticatePreceptor(int rc, sqlite3 *db, char *err_msg);
@@ -32,6 +33,9 @@ void visualizeMarksAndFreq(int *rc, sqlite3 *db, char *err_msg);
 int markFrequency(int rc, sqlite3 *db, char *err_msg, char id[10]);
 void viewResidentData(int *rc, sqlite3 *db, char preceptor_id[10]);
 int gradeResident(int rc, sqlite3 *db, char *err_msg);
+int reviewResidency(int rc, sqlite3 *db, char *err_msg);
+int reviewPreceptor(int rc, sqlite3 *db, char *err_msg);
+int viewAllReviews(int rc, sqlite3 *db, char *err_msg);
 
 struct Manager{
     int id;
@@ -99,7 +103,8 @@ int main() {
                 "CREATE TABLE IF NOT EXISTS residents(id INTEGER PRIMARY KEY, name TEXT, password TEXT, preceptor_id INTEGER, residency_id INTEGER, frequency INTEGER DEFAULT 0);"
                 "CREATE TABLE IF NOT EXISTS residencies(id INTEGER PRIMARY KEY, residencyName TEXT, residency_course TEXT);"
                 "CREATE TABLE IF NOT EXISTS activities(id INTEGER PRIMARY KEY, name TEXT, description TEXT, max_grade INTEGER, residency_id INTEGER REFERENCES residencies(id));"
-                "CREATE TABLE IF NOT EXISTS activities_residents(id INTEGER PRIMARY KEY, feedback TEXT, activity_id INTEGER, residency_id INTEGER, user_id INTEGER, done INTEGER, grade INTEGER);";
+                "CREATE TABLE IF NOT EXISTS activities_residents(id INTEGER PRIMARY KEY, feedback TEXT, activity_id INTEGER, residency_id INTEGER, user_id INTEGER, done INTEGER, grade INTEGER);"
+                "CREATE TABLE IF NOT EXISTS reviews(id INTEGER PRIMARY KEY, rating INTEGER, comment TEXT, target_id TEXT, target_type TEXT);";
 
     rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
     
@@ -174,6 +179,7 @@ int main() {
         printf("\nCadastrar Atividades - 4");
         printf("\nVisualizar Atividades por Residencia - 5");
         printf("\nVisualizar Desempenho e Frequencia dos Residentes - 6");
+        printf("\nVisualizar todas as reviews. - 7");
         printf("\nSair - 0");
         printf("\nDigite o que você deseja fazer: ");
 
@@ -352,6 +358,10 @@ int main() {
         if(userAction == 6) {
             visualizeMarksAndFreq(&rc, db, err_msg);
         }
+        //CASO 7, VER TODAS AS REVIEWS
+        if(userAction == 7) {
+            viewAllReviews(rc, db, err_msg);
+        }
     }
     // ENTRA NAS AÇÕES DO PRECEPTOR
     while(status == 2) {
@@ -387,6 +397,8 @@ int main() {
         printf("\nRegistrar Frequência - 2");
         printf("\nVisualizar Feedbacks do Preceptor - 3");
         printf("\nSair - 4");
+        printf("\nAvaliar Plano de Residência - 5");
+        printf("\nAvaliar Preceptor - 6");
         printf("\nDigite o que você deseja fazer: ");
 
         scanf("%i", &userAction);
@@ -415,6 +427,13 @@ int main() {
         if (userAction == 4) {
             status = 0;
         }
+        if (userAction == 5){
+            reviewResidency(rc, db, err_msg);
+        }
+        if (userAction == 6){
+            reviewPreceptor(rc, db, err_msg);
+        }
+
 
     }
 
@@ -1059,8 +1078,121 @@ void visualizeMarksAndFreq(int *rc, sqlite3 *db, char *err_msg){
     }
 
     sqlite3_finalize(stmt);
-
 }
+
+int reviewResidency(int rc, sqlite3 *db, char *err_msg) {
+    char sql[500];
+    int rating;
+    char comment[200];
+    int target_id = -1;
+
+    for (int i = 0; i < contResident; ++i) {
+        if (strcmp(residents[i]->id, currentUserID) == 0) {
+            target_id = atoi(residents[i]->residency_id);
+            break;
+        }
+    }
+    
+    if (target_id == -1) {
+        fprintf(stderr, "Não achamos um id de residencia.\n");
+        return 1;
+    }
+
+    printf("\nDigite sua avaliação (de 1 a 5) para seu plano de residência: ");
+    scanf("%i", &rating);
+    printf("\nDigite seu comentário: ");
+    scanf("%199s", comment);  // Limit the scanf to 199 characters to prevent buffer overflow
+
+    sprintf(sql, "INSERT INTO reviews(rating, comment, target_id, target_type) VALUES(%d, '%s', %d, 'residency');", rating, comment, target_id);
+
+    rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+
+    if (rc != SQLITE_OK ) {
+        fprintf(stderr, "Falhou para inserir essa review: %s\n", err_msg);
+        sqlite3_free(err_msg);
+        return 1;
+    } else {
+        printf("\nReview enviada com sucesso.\n");
+        return 0;
+    }
+}
+
+int reviewPreceptor(int rc, sqlite3 *db, char *err_msg) {
+    char sql[500];
+    int rating;
+    char comment[200];
+    int target_id = -1;
+
+    for (int i = 0; i < contResident; ++i) {
+        if (strcmp(residents[i]->id, currentUserID) == 0) {
+            target_id = atoi(residents[i]->preceptor_id);
+            break;
+        }
+    }
+    
+    if (target_id == -1) {
+        fprintf(stderr, "Não achamos um id de preceptor.\n");
+        return 1;
+    }
+
+    printf("\nDigite sua avaliação (de 1 a 5) para seu preceptor: ");
+    scanf("%i", &rating);
+    printf("\nDigite seu comentário: ");
+    scanf("%199s", comment);  // Limit the scanf to 199 characters to prevent buffer overflow
+
+    sprintf(sql, "INSERT INTO reviews(rating, comment, target_id, target_type) VALUES(%d, '%s', %d, 'preceptor');", rating, comment, target_id);
+
+    rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+
+    if (rc != SQLITE_OK ) {
+        fprintf(stderr, "Falhou para inserir essa review.: %s\n", err_msg);
+        sqlite3_free(err_msg);
+        return 1;
+    } else {
+        printf("\nReview enviada com sucesso.\n");
+        return 0;
+    }
+}
+
+int callbackReviews(void *NotUsed, int argc, char **argv, char **azColName) {
+    printf("Avaliação do %s %s: nota: %s; avaliação: %s\n", 
+        argv[3], // Este é o target_type (preceptor ou residência)
+        argv[0], // Este é o nome (do preceptor ou da residência)
+        argv[1], // Este é a nota
+        argv[2]  // Este é o comentário
+    );
+    return 0;
+}
+
+int viewAllReviews(int rc, sqlite3 *db, char *err_msg) {
+    char sql[500];
+
+    sprintf(sql, 
+        "SELECT "
+        "CASE "
+            "WHEN reviews.target_type = 'preceptor' THEN preceptors.name "
+            "WHEN reviews.target_type = 'residency' THEN residencies.residencyName "
+        "END, "
+        "reviews.rating, "
+        "reviews.comment, "
+        "reviews.target_type "
+        "FROM reviews "
+        "LEFT JOIN preceptors ON reviews.target_id = preceptors.id "
+        "LEFT JOIN residencies ON reviews.target_id = residencies.id;"
+    );
+
+    rc = sqlite3_exec(db, sql, callbackReviews, 0, &err_msg);
+
+    if (rc != SQLITE_OK ) {
+        fprintf(stderr, "Failed to fetch data: %s\n", err_msg);
+        sqlite3_free(err_msg);
+        return 1;
+    } else {
+        printf("\nFetched data successfully.\n");
+        return 0;
+    }
+}
+
 //status = authenticatePreceptor(rx, db, err_msg);
 
 // Activities
