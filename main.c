@@ -406,12 +406,8 @@ int main() {
 
         if (userAction == 1){
             for(int i=0; i<contResident; i++){
-                // if(residents[i]->id == currentUserID){
                 if(strcmp(residents[i]->id, currentUserID) == 0){
                     printf("Olá %s, informe as atividades realizadas hoje:", residents[i]->name);
-                    // residencyID = (int)residents[i]->residency_id;
-
-                    // printf("ResidencyID de %s: %s", residents[i]->name, residents[i]->residency_id);
                     visualizeAndMarkActivities(rc, db, err_msg, residents[i]->residency_id);
                 }
             }
@@ -457,14 +453,8 @@ int callbackManager(void *NotUsed, int argc, char **argv, char **azColName) {
 int callbackResident(void *NotUsed, int argc, char **argv, char **azColName) {
     NotUsed = 0;
 
-    // char c = argv[0];
-    // char* ponteiroChar = &c;
-    // void* ponteiroVoid = ponteiroChar;
-    // int* ponteiroInt = ponteiroVoid;
-
     residents[contResident] = (struct Resident *)malloc(1 * sizeof(struct Resident));
 
-    // residents[contResident]->id = contResident;
     strcpy(residents[contResident]->id, argv[0]);
     strcpy(residents[contResident]->name, argv[1]);
     strcpy(residents[contResident]->password, argv[2]);
@@ -483,7 +473,6 @@ int callbackResidencies(void *NotUsed, int argc, char **argv, char **azColName){
     residencies[contResidency] = (struct Residency *)malloc(1 * sizeof(struct Residency));
 
     strcpy(residencies[contResidency]->id, argv[0]);
-    // residencies[contResidency]->id = contResidency;
     strcpy(residencies[contResidency]->residencyName, argv[1]);
     strcpy(residencies[contResidency]->residency_course, argv[2]);
 
@@ -496,7 +485,6 @@ int callbackPreceptor(void *NotUsed, int argc, char **argv, char **azColName) {
     NotUsed = 0;
 
     preceptors[contPreceptor] = (struct Preceptor *)malloc(1 * sizeof(struct Preceptor));
-
     preceptors[contPreceptor]->id = contPreceptor;
     strcpy(preceptors[contPreceptor]->charId, argv[0]);
     strcpy(preceptors[contPreceptor]->name, argv[1]);
