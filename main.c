@@ -23,7 +23,9 @@ int authenticatePreceptor(int rc, sqlite3 *db, char *err_msg);
 int authenticateResident(int rc, sqlite3 *db, char *err_msg);
 
 int createResidency(int rc, sqlite3 *db, char *err_msg);
+int createResident(int rc, sqlite3 *db, char *err_msg);
 int createActivity(int rc, sqlite3 *db, char *err_msg);
+int createPreceptor(int rc, sqlite3 *db, char *err_msg);
 
 int visualizeResidencyActivities(int rc, sqlite3 *db, char *err_msg);
 int visualizeAndMarkActivities(int rc, sqlite3 *db, char *err_msg, char id[10]);
@@ -126,9 +128,6 @@ int main() {
         printf("\nSe você e da gestão digite: 1, Preceptor: 2 e Residente: 3. \nValor: ");
         scanf("%i", &tipo_de_usuario);
 
-        char nome[200];
-        char senha[200];
-
         if (tipo_de_usuario == 1) {
             status = authenticateManager(rc, db, err_msg);
 
@@ -191,156 +190,11 @@ int main() {
         }
         // CASO 2, CADASTRA RESIDENTE
         if (userAction == 2) {
-            char nome[200];
-            char senha[200];
-            int preceptorId;
-            int residency_id;
-            int sum=0;
-            int found=0;
-            int collectPreceptors[100];
-
-            char *sqlPreceptors = "SELECT * FROM preceptors;";
-
-            rc = sqlite3_exec(db, sqlPreceptors, callbackPreceptor, 0, &err_msg);
-
-            char *sqlResidencies = "SELECT * FROM residencies";
-            rc = sqlite3_exec(db, sqlResidencies, callbackResidencies, 0, &err_msg);
-
-            printf("\n---- Cadastre o residente ----\n");
-
-            printf("Nome de usuário: ");
-            scanf(" %[^\n]", nome);
-            printf("Senha: ");
-            scanf(" %[^\n]", senha);
-
-            
-            printf("\nLista das Residências: \n\n");
-
-            for(int i=0;i<contResidency;i++){
-                printf("ID: %s -- Nome: %s\n", residencies[i]->id, residencies[i]->residencyName);
-            }
-
-            printf("\nEscolha o ID da Residência: ");
-            scanf("%i", &residency_id);
-
-            while(residency_id > contResidency || residency_id < 0){
-                printf("Residência não encontrada, por favor, digite novamente.\n");
-                printf("Escolha o ID da Residência: ");
-                scanf("%i",&residency_id);
-                printf("\n");
-            }
-
-            printf("\nPreceptores da residência ID: %ls\n",&residency_id);
-
-            for (int i = 0; i < contPreceptor; i++) {
-                if(preceptors[i]->id == residency_id){
-                    printf("ID: %i -- Nome: %s\n", preceptors[i]->id, preceptors[i]->name);
-                    collectPreceptors[sum] = preceptors[i]->id;
-                    sum++;
-                } 
-            }
-
-            printf("\nEscolha o ID do Preceptor: ");
-            scanf("%i", &preceptorId);
-
-            while(!found){
-
-                printf("\nEscolha o ID do Preceptor: ");
-                scanf("%i", &preceptorId);
-
-                for (int i = 0; i < sum; i++) {
-                    if (preceptorId == collectPreceptors[i]) {
-                    found = 1;
-                    break;
-                    }
-                }
-
-                if (!found) {
-                     printf("O Preceptor digitado não é válida,tente novamente. \n");
-                }
-                
-            }
-
-            sqlite3_stmt *stmt;
-            char *sql = "INSERT INTO residents(name, password, preceptor_id, residency_id) VALUES(?,?,?,?)";
-
-            rc = sqlite3_prepare(db, sql, -1, &stmt, 0);
-
-            if (rc != SQLITE_OK) {
-                fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));    
-                return 1;
-            }    
-
-            sqlite3_bind_text(stmt, 1, nome, strlen(nome), NULL);
-            sqlite3_bind_text(stmt, 2, senha, strlen(senha), NULL);
-            sqlite3_bind_int(stmt, 3, preceptorId);
-            sqlite3_bind_int(stmt, 4, residency_id);
-
-            rc = sqlite3_step(stmt);
-
-            if (rc != SQLITE_DONE) {
-                printf("execution failed: %s", sqlite3_errmsg(db));
-            }
-
-            sqlite3_finalize(stmt);   
-
-            printf("\nResidente cadastrado com sucesso.\n");
+            createResident(rc, db, err_msg);
         }
         // CASO 3, CADASTRA PRECEPTORES
         if (userAction == 3) {
-            char nome[200];
-            char senha[200];
-            int residency_id;
-
-            char *sqlResidencies = "SELECT * FROM residencies";
-            rc = sqlite3_exec(db, sqlResidencies, callbackResidencies, 0, &err_msg);
-            
-            printf("\n---- Cadastre o Preceptor ----\n");
-
-            printf("Nome de usuário: ");
-            scanf(" %[^\n]", nome);
-            printf("Senha: ");
-            scanf(" %[^\n]", senha);
-
-            printf("\nLista das Residências: \n\n");
-
-            for(int i=0;i<contResidency;i++){
-                printf("ID: %s -- Nome: %s\n", residencies[i]->id, residencies[i]->residencyName);
-            }
-
-            printf("\nEscolha o ID da Residência: ");
-            scanf("%i", &residency_id);
-
-            while(residency_id > contResidency || residency_id < 0){
-                printf("Residência não encontrada, por favor, digite novamente.\n");
-                printf("Escolha o ID da Residência: ");
-                scanf("%i",&residency_id);
-                printf("\n");
-            }
-
-            
-            sqlite3_stmt *stmt;
-            char *sql = "INSERT INTO preceptors(name, password, residency_id) VALUES(?,?,?)";
-
-            rc = sqlite3_prepare(db, sql, -1, &stmt, 0);
-
-            if (rc != SQLITE_OK) {
-                fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));    
-                return 1;
-            }    
-
-            sqlite3_bind_text(stmt, 1, nome, strlen(nome), NULL);
-            sqlite3_bind_text(stmt, 2, senha, strlen(senha), NULL);
-            sqlite3_bind_int(stmt, 3, residency_id);
-            rc = sqlite3_step(stmt);
-
-            if (rc != SQLITE_DONE) {
-                printf("execution failed: %s", sqlite3_errmsg(db));
-            }
-
-            sqlite3_finalize(stmt);  
-
-            printf("\nPreceptor cadastrado com sucesso.\n"); 
+            createPreceptor(rc, db, err_msg);
         }
         // CASO 0, DESLOGA
         if (userAction == 0) {
@@ -605,6 +459,100 @@ int createResidency(int rc, sqlite3 *db, char *err_msg) {
     return 1;
 }
 
+int createResident(int rc, sqlite3 *db, char *err_msg) {
+    char nome[200];
+    char senha[200];
+    int preceptorId;
+    int residency_id;
+    int sum=0;
+    int found=0;
+    int collectPreceptors[100];
+
+    char *sqlPreceptors = "SELECT * FROM preceptors;";
+
+    rc = sqlite3_exec(db, sqlPreceptors, callbackPreceptor, 0, &err_msg);
+
+    char *sqlResidencies = "SELECT * FROM residencies";
+    rc = sqlite3_exec(db, sqlResidencies, callbackResidencies, 0, &err_msg);
+
+    printf("\n---- Cadastre o residente ----\n");
+
+    printf("Nome de usuário: ");
+    scanf(" %[^\n]", nome);
+    printf("Senha: ");
+    scanf(" %[^\n]", senha);
+
+    
+    printf("\nLista das Residências: \n\n");
+
+    for(int i=0;i<contResidency;i++){
+        printf("ID: %s -- Nome: %s\n", residencies[i]->id, residencies[i]->residencyName);
+    }
+
+    printf("\nEscolha o ID da Residência: ");
+    scanf("%i", &residency_id);
+
+    while(residency_id > contResidency || residency_id < 0){
+        printf("Residência não encontrada, por favor, digite novamente.\n");
+        printf("Escolha o ID da Residência: ");
+        scanf("%i",&residency_id);
+        printf("\n");
+    }
+
+    printf("\nPreceptores da residência ID: %ls\n",&residency_id);
+
+    for (int i = 0; i < contPreceptor; i++) {
+        if(preceptors[i]->id == residency_id){
+            printf("ID: %i -- Nome: %s\n", preceptors[i]->id, preceptors[i]->name);
+            collectPreceptors[sum] = preceptors[i]->id;
+            sum++;
+        } 
+    }
+
+    while(!found){
+        printf("\nEscolha o ID do Preceptor: ");
+        scanf("%i", &preceptorId);
+
+        for (int i = 0; i < sum; i++) {
+            if (preceptorId == collectPreceptors[i]) {
+            found = 1;
+            break;
+            }
+        }
+
+        if (!found) {
+            printf("O Preceptor digitado não é válida,tente novamente. \n");
+        }
+    }
+
+    sqlite3_stmt *stmt;
+    char *sql = "INSERT INTO residents(name, password, preceptor_id, residency_id) VALUES(?,?,?,?)";
+
+    rc = sqlite3_prepare(db, sql, -1, &stmt, 0);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));    
+        return 1;
+    }    
+
+    sqlite3_bind_text(stmt, 1, nome, strlen(nome), NULL);
+    sqlite3_bind_text(stmt, 2, senha, strlen(senha), NULL);
+    sqlite3_bind_int(stmt, 3, preceptorId);
+    sqlite3_bind_int(stmt, 4, residency_id);
+
+    rc = sqlite3_step(stmt);
+
+    if (rc != SQLITE_DONE) {
+        printf("execution failed: %s", sqlite3_errmsg(db));
+    }
+
+    sqlite3_finalize(stmt);   
+
+    printf("\nResidente cadastrado com sucesso.\n");
+
+    return 1;
+}
+
 int createActivity(int rc, sqlite3 *db, char *err_msg) {
     char name[200];
     char description[1000];
@@ -669,6 +617,62 @@ int createActivity(int rc, sqlite3 *db, char *err_msg) {
 
     printf("\nAtividade criada com sucesso.\n");
 
+    return 1;
+}
+
+int createPreceptor(int rc, sqlite3 *db, char *err_msg) {
+    char nome[200];
+    char senha[200];
+    int residency_id;
+
+    char *sqlResidencies = "SELECT * FROM residencies";
+    rc = sqlite3_exec(db, sqlResidencies, callbackResidencies, 0, &err_msg);
+    
+    printf("\n---- Cadastre o Preceptor ----\n");
+
+    printf("Nome de usuário: ");
+    scanf(" %[^\n]", nome);
+    printf("Senha: ");
+    scanf(" %[^\n]", senha);
+
+    printf("\nLista das Residências: \n\n");
+
+    for(int i=0;i<contResidency;i++){
+        printf("ID: %s -- Nome: %s\n", residencies[i]->id, residencies[i]->residencyName);
+    }
+
+    printf("\nEscolha o ID da Residência: ");
+    scanf("%i", &residency_id);
+
+    while(residency_id > contResidency || residency_id < 0){
+        printf("Residência não encontrada, por favor, digite novamente.\n");
+        printf("Escolha o ID da Residência: ");
+        scanf("%i",&residency_id);
+        printf("\n");
+    }
+    
+    sqlite3_stmt *stmt;
+    char *sql = "INSERT INTO preceptors(name, password, residency_id) VALUES(?,?,?)";
+
+    rc = sqlite3_prepare(db, sql, -1, &stmt, 0);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));    
+        return 1;
+    }    
+
+    sqlite3_bind_text(stmt, 1, nome, strlen(nome), NULL);
+    sqlite3_bind_text(stmt, 2, senha, strlen(senha), NULL);
+    sqlite3_bind_int(stmt, 3, residency_id);
+    rc = sqlite3_step(stmt);
+
+    if (rc != SQLITE_DONE) {
+        printf("execution failed: %s", sqlite3_errmsg(db));
+    }
+
+    sqlite3_finalize(stmt);  
+
+    printf("\nPreceptor cadastrado com sucesso.\n"); 
     return 1;
 }
 
