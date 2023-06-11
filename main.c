@@ -1068,18 +1068,30 @@ void visualizeMarksAndFreq(int *rc, sqlite3 *db, char *err_msg){
     sqlite3_finalize(stmt);
 }
 
+int findTargetIdRecursive(char* currentUserID, int contResident, int i) {
+    if (i >= contResident) {
+        return -1;
+    }
+
+    if (strcmp(residents[i]->id, currentUserID) == 0) {
+        return atoi(residents[i]->residency_id);
+    }
+
+    return findTargetIdRecursive(currentUserID, contResident, i + 1);
+}
+
+int findTargetId(char* currentUserID, int contResident) {
+    return findTargetIdRecursive(currentUserID, contResident, 0);
+}
+
 int reviewResidency(int rc, sqlite3 *db, char *err_msg) {
     char sql[500];
     int rating;
     char comment[200];
-    int target_id = -1;
+    int target_id;
 
-    for (int i = 0; i < contResident; ++i) {
-        if (strcmp(residents[i]->id, currentUserID) == 0) {
-            target_id = atoi(residents[i]->residency_id);
-            break;
-        }
-    }
+    // Use a função findTargetId para encontrar o target_id
+    target_id = findTargetId(currentUserID, contResident);
     
     if (target_id == -1) {
         fprintf(stderr, "Não achamos um id de residencia.\n");
@@ -1089,7 +1101,7 @@ int reviewResidency(int rc, sqlite3 *db, char *err_msg) {
     printf("\nDigite sua avaliação (de 1 a 5) para seu plano de residência: ");
     scanf("%i", &rating);
     printf("\nDigite seu comentário: ");
-    scanf("%199s", comment);  // Limit the scanf to 199 characters to prevent buffer overflow
+    scanf(" %[^\n\r]", comment);  // Limit the scanf to 199 characters to prevent buffer overflow
 
     sprintf(sql, "INSERT INTO reviews(rating, comment, target_id, target_type) VALUES(%d, '%s', %d, 'residency');", rating, comment, target_id);
 
